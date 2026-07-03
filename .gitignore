@@ -1,0 +1,13 @@
+.agents/
+
+server.log
+server.err.log
+
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+src/infrastructure/reporting/__pycache__/
+*.pyc
+
+.git-corrupt-backup-*/

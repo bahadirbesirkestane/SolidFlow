@@ -1,0 +1,17 @@
+{
+  "name": "soliddosyaokuma",
+  "version": "1.0.0",
+  "description": "Solid klasor yapisindan basit is akisi tablosu ureten MVP uygulamasi",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

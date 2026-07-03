@@ -1,0 +1,58 @@
+[
+  {
+    "extension": ".SLDPRT",
+    "displayName": "Parca",
+    "defaultProcess": "Imalat",
+    "defaultServiceType": "Parca Uretimi",
+    "isActive": true
+  },
+  {
+    "extension": ".SLDASM",
+    "displayName": "Montaj",
+    "defaultProcess": "Montaj",
+    "defaultServiceType": "Montaj",
+    "isActive": true
+  },
+  {
+    "extension": ".SLDDRW",
+    "displayName": "Teknik Resim",
+    "defaultProcess": "Imalat",
+    "defaultServiceType": "Resim Yonetimi",
+    "isActive": true
+  },
+  {
+    "extension": ".DXF",
+    "displayName": "Kesim Dosyasi",
+    "defaultProcess": "Dis Hizmet",
+    "defaultServiceType": "Kesim Hizmeti",
+    "isActive": true
+  },
+  {
+    "extension": ".STEP",
+    "displayName": "Disa Aktarim CAD",
+    "defaultProcess": "Dis Hizmet",
+    "defaultServiceType": "Dis Hizmet",
+    "isActive": true
+  },
+  {
+    "extension": ".IGS",
+    "displayName": "Disa Aktarim CAD",
+    "defaultProcess": "Dis Hizmet",
+    "defaultServiceType": "Dis Hizmet",
+    "isActive": true
+  },
+  {
+    "extension": ".XLSX",
+    "displayName": "Liste",
+    "defaultProcess": "Planlama",
+    "defaultServiceType": "Liste",
+    "isActive": true
+  },
+  {
+    "extension": ".PDF",
+    "displayName": "Dokuman",
+    "defaultProcess": "Dokumantasyon",
+    "defaultServiceType": "Dokuman",
+    "isActive": true
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "override-650",
+    "matchMode": "partCode",
+    "partCode": "650",
+    "fileName": "650_BANT.SLDPRT",
+    "process": "Özel Satin Alma",
+    "serviceType": "Kumanda",
+    "note": "",
+    "isActive": true
+  }
+]

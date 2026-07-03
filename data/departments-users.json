@@ -1,0 +1,22 @@
+{
+  "departments": [
+    { "id": "dept-procurement", "name": "Satin Alma", "isActive": true },
+    { "id": "dept-warehouse", "name": "Depo", "isActive": true },
+    { "id": "dept-quality", "name": "Kalite Kontrol", "isActive": true },
+    { "id": "dept-internal", "name": "Ic Hizmet", "isActive": true },
+    { "id": "dept-logistics", "name": "Lojistik", "isActive": true },
+    { "id": "dept-outsource", "name": "Dis Hizmet", "isActive": true },
+    { "id": "dept-assembly", "name": "Montaj", "isActive": true }
+  ],
+  "users": [
+    { "id": "user-ayse", "departmentId": "dept-procurement", "fullName": "Ayse Demir", "email": "ayse@local", "isActive": true },
+    { "id": "user-mert", "departmentId": "dept-procurement", "fullName": "Mert Yilmaz", "email": "mert@local", "isActive": true },
+    { "id": "user-mehmet", "departmentId": "dept-warehouse", "fullName": "Mehmet Kaya", "email": "mehmet@local", "isActive": true },
+    { "id": "user-zeynep", "departmentId": "dept-quality", "fullName": "Zeynep Arslan", "email": "zeynep@local", "isActive": true },
+    { "id": "user-hakan", "departmentId": "dept-internal", "fullName": "Hakan Celik", "email": "hakan@local", "isActive": true },
+    { "id": "user-selin", "departmentId": "dept-logistics", "fullName": "Selin Kurt", "email": "selin@local", "isActive": true },
+    { "id": "user-burak", "departmentId": "dept-outsource", "fullName": "Burak Sahin", "email": "burak@local", "isActive": true },
+    { "id": "user-emre", "departmentId": "dept-assembly", "fullName": "Emre Koc", "email": "emre@local", "isActive": true },
+    { "id": "user-elif", "departmentId": "dept-assembly", "fullName": "Elif Yildiz", "email": "elif@local", "isActive": true }
+  ]
+}

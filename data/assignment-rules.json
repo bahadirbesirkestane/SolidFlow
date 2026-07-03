@@ -1,0 +1,39 @@
+{
+  "departmentMappings": [
+    {
+      "departmentId": "dept-procurement",
+      "departmentName": "Satin Alma",
+      "aliases": ["SATIN ALMA", "SA", "TEDARIK", "TEDARIGI", "SATINALMA"]
+    },
+    {
+      "departmentId": "dept-warehouse",
+      "departmentName": "Depo",
+      "aliases": ["DEPO", "TESLIM", "SAYIM"]
+    },
+    {
+      "departmentId": "dept-quality",
+      "departmentName": "Kalite Kontrol",
+      "aliases": ["KALITE", "KONTROL", "QC"]
+    },
+    {
+      "departmentId": "dept-internal",
+      "departmentName": "Ic Hizmet",
+      "aliases": ["IC HIZMET", "ICHIZMET", "IH"]
+    },
+    {
+      "departmentId": "dept-logistics",
+      "departmentName": "Lojistik",
+      "aliases": ["LOJISTIK", "SEVK", "ULASIM"]
+    },
+    {
+      "departmentId": "dept-outsource",
+      "departmentName": "Dis Hizmet",
+      "aliases": ["DIS HIZMET", "DISHIZMET", "KESIM", "DT", "DIS TEDARIK"]
+    },
+    {
+      "departmentId": "dept-assembly",
+      "departmentName": "Montaj",
+      "aliases": ["MONTAJ", "M"]
+    }
+  ]
+}

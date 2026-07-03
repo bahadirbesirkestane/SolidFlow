@@ -1,0 +1,98 @@
+[
+  {
+    "id": "template-procurement-flow",
+    "name": "Satin Alma ve Ic Hizmet",
+    "description": "Tedarik edilen urunlerin siparis, teslim alma, sayim ve varsa ic hizmet sureci.",
+    "isActive": true,
+    "steps": [
+      {
+        "id": "procurement-step-1",
+        "sequenceNo": 1,
+        "name": "Satin Alma",
+        "description": "Urunler icin siparis verilir.",
+        "defaultAssignee": "Satin Alma",
+        "isOptional": false
+      },
+      {
+        "id": "procurement-step-2",
+        "sequenceNo": 2,
+        "name": "Urunlerin Teslim Alinmasi",
+        "description": "Siparis edilen urunlerin depoya veya sahaya girisi saglanir.",
+        "defaultAssignee": "Depo",
+        "isOptional": false
+      },
+      {
+        "id": "procurement-step-3",
+        "sequenceNo": 3,
+        "name": "Sayim ve Kontrol",
+        "description": "Teslim alinan kalemler adet ve kalite olarak kontrol edilir.",
+        "defaultAssignee": "Kalite Kontrol",
+        "isOptional": false
+      },
+      {
+        "id": "procurement-step-4",
+        "sequenceNo": 4,
+        "name": "Ic Hizmet",
+        "description": "Gerekliyse ic hizmet veya ic isleme uygulanir.",
+        "defaultAssignee": "Ic Hizmet",
+        "isOptional": true
+      }
+    ]
+  },
+  {
+    "id": "template-outsource-part-flow",
+    "name": "Dis Hizmetten Montaja",
+    "description": "Parcalarin dis hizmete gonderimi, geri alinmasi ve montaja hazirlanmasi.",
+    "isActive": true,
+    "steps": [
+      {
+        "id": "outsource-step-1",
+        "sequenceNo": 1,
+        "name": "Parcalarin Dis Hizmete Ulasimi",
+        "description": "Parcalar dis hizmet saglayicisina sevk edilir.",
+        "defaultAssignee": "Lojistik",
+        "isOptional": false
+      },
+      {
+        "id": "outsource-step-2",
+        "sequenceNo": 2,
+        "name": "Dis Hizmet",
+        "description": "Parca uzerinde gerekli dis hizmet operasyonu uygulanir.",
+        "defaultAssignee": "Dis Hizmet",
+        "isOptional": false
+      },
+      {
+        "id": "outsource-step-3",
+        "sequenceNo": 3,
+        "name": "Parcalarin Alinmasi",
+        "description": "Islem goren parcalar geri teslim alinir.",
+        "defaultAssignee": "Lojistik",
+        "isOptional": false
+      },
+      {
+        "id": "outsource-step-4",
+        "sequenceNo": 4,
+        "name": "Parca Listesi Kontrol",
+        "description": "Gelen parcalar listeye gore kontrol edilir.",
+        "defaultAssignee": "Kalite Kontrol",
+        "isOptional": false
+      },
+      {
+        "id": "outsource-step-5",
+        "sequenceNo": 5,
+        "name": "Ic Hizmet",
+        "description": "Gerekliyse ic hizmet veya son hazirlik uygulanir.",
+        "defaultAssignee": "Ic Hizmet",
+        "isOptional": true
+      },
+      {
+        "id": "outsource-step-6",
+        "sequenceNo": 6,
+        "name": "Montaj",
+        "description": "Parcalar montaj asamasina aktarilir.",
+        "defaultAssignee": "Montaj",
+        "isOptional": false
+      }
+    ]
+  }
+]

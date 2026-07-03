@@ -1,0 +1,98 @@
+[
+  {
+    "id": "keyword-rulman",
+    "keyword": "RULMAN",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-motor",
+    "keyword": "MOTOR",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-loadcell",
+    "keyword": "LOADCELL",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-encoder",
+    "keyword": "ENCODER",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-bant",
+    "keyword": "BANT",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-profil",
+    "keyword": "PROFIL",
+    "process": "Profil",
+    "serviceType": "Profil Isleme",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-mil",
+    "keyword": "MIL",
+    "process": "Torna/Freze",
+    "serviceType": "Torna Freze",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-sac",
+    "keyword": "SAC",
+    "process": "Bukum",
+    "serviceType": "Sac Isleme",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-civata",
+    "keyword": "CIVATA",
+    "process": "Satin Alma",
+    "serviceType": "Baglanti Elemani Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-somun",
+    "keyword": "SOMUN",
+    "process": "Satin Alma",
+    "serviceType": "Baglanti Elemani Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-pul",
+    "keyword": "PUL",
+    "process": "Satin Alma",
+    "serviceType": "Baglanti Elemani Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  },
+  {
+    "id": "keyword-kaucuk",
+    "keyword": "KAUCUK",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "matchTarget": "fileName",
+    "isActive": true
+  }
+]
