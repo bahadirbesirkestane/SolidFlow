@@ -10,16 +10,18 @@ def main():
     input_path = sys.argv[1]
     output_path = sys.argv[2]
 
-    with open(input_path, "r", encoding="utf-8") as handle:
+    with open(input_path, "r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
 
     workbook = Workbook()
     summary_sheet = workbook.active
     summary_sheet.title = "Ozet"
     rows_sheet = workbook.create_sheet("Is Akisi")
+    part_list_sheet = workbook.create_sheet("Parca Listesi")
 
     write_summary(summary_sheet, payload)
     write_rows(rows_sheet, payload.get("rows", []))
+    write_part_list(part_list_sheet, payload.get("partList", []))
 
     workbook.save(output_path)
 
@@ -113,6 +115,47 @@ def write_rows(sheet, rows):
             sheet.cell(row=row_index, column=column_index).value = value
 
     widths = [14, 34, 18, 18, 18, 22, 14, 24, 30, 44]
+    for index, width in enumerate(widths, start=1):
+        sheet.column_dimensions[chr(64 + index)].width = width
+
+
+def write_part_list(sheet, part_list):
+    columns = [
+        "Parca Kodu",
+        "Temsilci Dosya",
+        "Ana Grup",
+        "Surec",
+        "Hizmet",
+        "Toplam Adet",
+        "Dosya Sayisi",
+        "Not",
+    ]
+
+    header_fill = PatternFill(fill_type="solid", fgColor="1F2933")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    for index, column in enumerate(columns, start=1):
+        cell = sheet.cell(row=1, column=index)
+        cell.value = column
+        cell.fill = header_fill
+        cell.font = header_font
+
+    for row_index, item in enumerate(part_list, start=2):
+        values = [
+            item.get("partCode", ""),
+            item.get("fileName", ""),
+            item.get("mainGroup", ""),
+            item.get("suggestedProcess", ""),
+            item.get("serviceType", ""),
+            item.get("quantity", 0),
+            item.get("fileCount", 0),
+            item.get("note", ""),
+        ]
+
+        for column_index, value in enumerate(values, start=1):
+            sheet.cell(row=row_index, column=column_index).value = value
+
+    widths = [14, 34, 18, 18, 22, 14, 14, 28]
     for index, width in enumerate(widths, start=1):
         sheet.column_dimensions[chr(64 + index)].width = width
 

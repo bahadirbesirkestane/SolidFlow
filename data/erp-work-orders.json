@@ -1,0 +1,75 @@
+{
+  "workOrders": [
+    {
+      "id": "erp-wo-1001",
+      "erpNo": "ERP-240703-001",
+      "projectCode": "IN26016",
+      "customerName": "Tartım Hatları A.Ş.",
+      "status": "Hazırlanıyor",
+      "sourceType": "mock-api",
+      "dueDate": "2026-07-08T08:00:00.000Z",
+      "note": "İlk entegrasyon önizlemesi için örnek iş emri",
+      "lines": [
+        {
+          "lineNo": 10,
+          "partCode": "KM-001",
+          "partName": "Konveyör Gövde",
+          "quantity": 2,
+          "process": "İç Hizmet",
+          "serviceType": "Montaj Hazırlık",
+          "priority": "Yüksek",
+          "note": "Montaj öncesi kontrol gerekli"
+        },
+        {
+          "lineNo": 20,
+          "partCode": "SAC-410",
+          "partName": "Sac Kesim Parçası",
+          "quantity": 12,
+          "process": "Dış Hizmet",
+          "serviceType": "Lazer Kesim",
+          "priority": "Yüksek",
+          "note": "Kesim sonrası kalite kontrol"
+        },
+        {
+          "lineNo": 30,
+          "partCode": "STD-900",
+          "partName": "Standart Bağlantı Elemanı",
+          "quantity": 48,
+          "process": "Satın Alma",
+          "serviceType": "Malzeme Tedariği",
+          "priority": "Normal"
+        }
+      ]
+    },
+    {
+      "id": "erp-wo-1002",
+      "erpNo": "ERP-240703-002",
+      "projectCode": "IN26020",
+      "customerName": "Makine Sistemleri Ltd.",
+      "status": "Planlandı",
+      "sourceType": "mock-api",
+      "dueDate": "2026-07-12T11:30:00.000Z",
+      "note": "Sevkiyat öncesi depo ve lojistik dağıtımı test edilecek",
+      "lines": [
+        {
+          "lineNo": 10,
+          "partCode": "AMB-100",
+          "partName": "Ambalaj Kiti",
+          "quantity": 5,
+          "process": "Lojistik",
+          "serviceType": "Sevkiyat Hazırlığı",
+          "priority": "Normal"
+        },
+        {
+          "lineNo": 20,
+          "partCode": "DEPO-22",
+          "partName": "Depo Çıkış Kalemi",
+          "quantity": 9,
+          "process": "Depo",
+          "serviceType": "Sayım ve Çıkış",
+          "priority": "Normal"
+        }
+      ]
+    }
+  ]
+}

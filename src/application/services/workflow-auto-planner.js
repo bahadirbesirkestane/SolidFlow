@@ -31,6 +31,7 @@ class WorkflowAutoPlanner {
             serviceType: row.serviceType,
             files: [],
             partCodes: [],
+            partList: [],
           },
           assignmentSignals: [],
           stepAssignments: [],
@@ -38,11 +39,19 @@ class WorkflowAutoPlanner {
       }
 
       const group = grouped.get(key);
-      group.itemCount += 1;
+      group.itemCount += Number(row.quantity || 1);
       group.itemPayload.files.push(row.fileName);
       if (row.partCode) {
         group.itemPayload.partCodes.push(row.partCode);
       }
+      group.itemPayload.partList.push({
+        partCode: row.partCode || "",
+        fileName: row.fileName,
+        quantity: Number(row.quantity || 1),
+        mainGroup: row.mainGroup || row.folder || "",
+        suggestedProcess: row.suggestedProcess,
+        serviceType: row.serviceType,
+      });
       group.assignmentSignals.push(
         row.fileName,
         row.folder,

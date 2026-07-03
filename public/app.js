@@ -1,5 +1,8 @@
-const state = {
+﻿const state = {
   rows: [],
+  partList: [],
+  partListBase: [],
+  resultView: "workflow",
   fileTypeRules: [],
   keywordRules: [],
   overrides: [],
@@ -14,6 +17,12 @@ const state = {
     openJobs: [],
     auditEvents: [],
   },
+  erp: {
+    workOrders: [],
+    selectedWorkOrderId: null,
+    selectedWorkOrder: null,
+    dispatch: null,
+  },
 };
 
 const folderInput = document.getElementById("folderInput");
@@ -22,6 +31,13 @@ const statusText = document.getElementById("statusText");
 const stats = document.getElementById("stats");
 const searchInput = document.getElementById("searchInput");
 const resultsBody = document.getElementById("resultsBody");
+const partListBody = document.getElementById("partListBody");
+const partListStats = document.getElementById("partListStats");
+const partListSearchInput = document.getElementById("partListSearchInput");
+const partListCountText = document.getElementById("partListCountText");
+const resetPartListButton = document.getElementById("resetPartListButton");
+const exportPartListExcelButton = document.getElementById("exportPartListExcelButton");
+const resultViewTabs = document.getElementById("resultViewTabs");
 const fileTypeRulesBody = document.getElementById("fileTypeRulesBody");
 const keywordRulesBody = document.getElementById("keywordRulesBody");
 const overrideRulesBody = document.getElementById("overrideRulesBody");
@@ -51,6 +67,12 @@ const userFullNameInput = document.getElementById("userFullNameInput");
 const userEmailInput = document.getElementById("userEmailInput");
 const userDepartmentSelect = document.getElementById("userDepartmentSelect");
 const userDirectory = document.getElementById("userDirectory");
+const erpStatusText = document.getElementById("erpStatusText");
+const erpWorkOrderList = document.getElementById("erpWorkOrderList");
+const erpWorkOrderCountText = document.getElementById("erpWorkOrderCountText");
+const erpSummary = document.getElementById("erpSummary");
+const erpDetailPanel = document.getElementById("erpDetailPanel");
+const refreshErpButton = document.getElementById("refreshErpButton");
 
 function switchTab(tabName) {
   document.querySelectorAll(".tab-button").forEach((button) => {
@@ -63,6 +85,10 @@ function switchTab(tabName) {
 
   if (tabName === "operations") {
     loadOperationsData();
+  }
+
+  if (tabName === "erp") {
+    loadErpData();
   }
 
   if (tabName === "file-types") {
@@ -78,8 +104,24 @@ function switchTab(tabName) {
   }
 }
 
+function switchResultView(viewName) {
+  state.resultView = viewName === "parts" ? "parts" : "workflow";
+
+  document.querySelectorAll("[data-result-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.resultView === state.resultView);
+  });
+
+  document.querySelectorAll("[data-result-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.resultPanel === state.resultView);
+  });
+}
+
 function setOperationsStatus(message) {
   operationsStatusText.textContent = message;
+}
+
+function setErpStatus(message) {
+  erpStatusText.textContent = message;
 }
 
 function createStatCard(label, value, tone = "") {
@@ -138,6 +180,75 @@ function renderRows(rows) {
       </tr>
     `;
   }).join("");
+}
+
+function filteredPartList() {
+  const query = partListSearchInput.value.trim().toLocaleLowerCase("tr");
+  if (!query) {
+    return state.partList.map((item, index) => ({ ...item, _sourceIndex: index }));
+  }
+
+  return state.partList.flatMap((item, index) => {
+    const haystack = [
+      item.partCode,
+      item.fileName,
+      item.mainGroup,
+      item.suggestedProcess,
+      item.serviceType,
+      item.note,
+    ].join(" ").toLocaleLowerCase("tr");
+
+    return haystack.includes(query) ? [{ ...item, _sourceIndex: index }] : [];
+  });
+}
+
+function renderPartListStats(partList) {
+  const totalQuantity = partList.reduce((total, item) => total + Number(item.quantity || 0), 0);
+  const distinctGroups = new Set(partList.map((item) => item.mainGroup).filter(Boolean)).size;
+  const notedCount = partList.filter((item) => String(item.note || "").trim()).length;
+
+  partListStats.innerHTML = [
+    createStatCard("Parça kalemi", String(partList.length)),
+    createStatCard("Toplam adet", String(totalQuantity)),
+    createStatCard("Ana grup", String(distinctGroups || 0)),
+    createStatCard("Not girilen", String(notedCount || 0)),
+  ].join("");
+}
+
+function renderPartList(partList) {
+  if (!Array.isArray(partList) || partList.length === 0) {
+    partListStats.innerHTML = "";
+    partListCountText.textContent = "0 kalem";
+    partListBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="muted">Parça listesi henüz oluşmadı. Önce klasör taraması yap.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  partListCountText.textContent = partList.length === state.partList.length
+    ? `${partList.length} kalem`
+    : `${partList.length} / ${state.partList.length} kalem`;
+  renderPartListStats(partList);
+
+  partListBody.innerHTML = partList.map((item, index) => `
+    <tr>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="partCode" value="${escapeAttribute(item.partCode || "")}" placeholder="Parça Kodu" /></td>
+      <td>
+        <div class="cell-stack">
+          <strong>${escapeHtml(item.fileName || "-")}</strong>
+          <span class="muted">${escapeHtml(item.files?.join(", ") || item.fileName || "-")}</span>
+        </div>
+      </td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="mainGroup" value="${escapeAttribute(item.mainGroup || "")}" placeholder="Ana Grup" /></td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="suggestedProcess" value="${escapeAttribute(item.suggestedProcess || "")}" placeholder="Süreç" /></td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="serviceType" value="${escapeAttribute(item.serviceType || "")}" placeholder="Hizmet" /></td>
+      <td><input class="inline-input quantity-cell" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="quantity" type="number" min="0" value="${escapeAttribute(String(item.quantity || 0))}" /></td>
+      <td>${escapeHtml(String(item.fileCount || 0))}</td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="note" value="${escapeAttribute(item.note || "")}" placeholder="Opsiyonel not" /></td>
+    </tr>
+  `).join("");
 }
 
 function filteredRows() {
@@ -334,6 +445,159 @@ function renderOpenJobs() {
   `).join("");
 }
 
+function renderErpSummary() {
+  const totalOrders = state.erp.workOrders.length;
+  const totalLines = state.erp.workOrders.reduce((total, workOrder) => total + Number(workOrder.lineCount || 0), 0);
+  const totalQuantity = state.erp.workOrders.reduce((total, workOrder) => total + Number(workOrder.totalQuantity || 0), 0);
+  const selectedReadyLines = Number(state.erp.dispatch?.summary?.readyLines || 0);
+  const selectedWaitingLines = Number(state.erp.dispatch?.summary?.waitingLines || 0);
+
+  erpSummary.innerHTML = [
+    createStatCard("ERP iş emri", String(totalOrders)),
+    createStatCard("Toplam satır", String(totalLines)),
+    createStatCard("Toplam adet", String(totalQuantity)),
+    createStatCard("Hazır yönlendirme", String(selectedReadyLines)),
+    createStatCard("Kural bekleyen", String(selectedWaitingLines), selectedWaitingLines > 0 ? "warning" : ""),
+  ].join("");
+}
+
+function renderErpWorkOrderList() {
+  erpWorkOrderCountText.textContent = `${state.erp.workOrders.length} emir`;
+
+  if (state.erp.workOrders.length === 0) {
+    erpWorkOrderList.innerHTML = `<div class="empty-state">Henüz ERP iş emri bulunmuyor.</div>`;
+    return;
+  }
+
+  erpWorkOrderList.innerHTML = state.erp.workOrders.map((workOrder) => `
+    <button class="project-card ${workOrder.id === state.erp.selectedWorkOrderId ? "active" : ""}" data-action="select-erp-work-order" data-work-order-id="${workOrder.id}">
+      <div class="cell-stack">
+        <strong>${escapeHtml(workOrder.erpNo)}</strong>
+        <span class="muted">${escapeHtml(workOrder.projectCode)} | ${escapeHtml(workOrder.customerName || "-")}</span>
+        <span class="muted">Teslim: ${escapeHtml(formatDate(workOrder.dueDate))}</span>
+      </div>
+      <div class="project-card-meta">
+        <span class="badge ${workOrder.status === "Planlandı" ? "warn" : "good"}">${escapeHtml(workOrder.status)}</span>
+        <span class="muted">${workOrder.lineCount} satır</span>
+      </div>
+    </button>
+  `).join("");
+}
+
+function renderErpDetail() {
+  if (!state.erp.selectedWorkOrder || !state.erp.dispatch) {
+    erpDetailPanel.innerHTML = "ERP detayını açmak için soldan bir iş emri seç.";
+    return;
+  }
+
+  const { workOrder } = state.erp.selectedWorkOrder;
+  const { dispatch } = state.erp;
+
+  erpDetailPanel.innerHTML = `
+    <div class="selected-project-header">
+      <div>
+        <p class="eyebrow">${escapeHtml(workOrder.erpNo)}</p>
+        <h3>${escapeHtml(workOrder.projectCode)} - ${escapeHtml(workOrder.customerName || "Müşteri bilgisi yok")}</h3>
+        <p class="muted">${escapeHtml(workOrder.note || "ERP açıklaması girilmemiş")}</p>
+      </div>
+      <div class="project-progress-card">
+        <strong>${dispatch.summary.readyLines}/${dispatch.summary.totalLines}</strong>
+        <span class="muted">Hazır yönlendirme satırı</span>
+      </div>
+    </div>
+
+    <div class="inline-actions top-export-actions">
+      <span class="muted">Kaynak: ${escapeHtml(workOrder.sourceType || "mock")} | Termin: ${escapeHtml(formatDate(workOrder.dueDate))}</span>
+      <div class="inline-actions">
+        <span class="badge ${dispatch.summary.waitingLines > 0 ? "warn" : "good"}">${dispatch.summary.waitingLines > 0 ? "Kural Bekliyor" : "Dağıtıma Hazır"}</span>
+      </div>
+    </div>
+
+    <div class="erp-grid">
+      <section class="ops-block">
+        <div class="table-header">
+          <h4>ERP'den Operasyona Geçiş</h4>
+          <span class="muted">${dispatch.nextSteps.length} adım</span>
+        </div>
+        <div class="erp-stage-list">
+          ${dispatch.nextSteps.map((step, index) => `
+            <article class="erp-stage ${step.status}">
+              <strong>${index + 1}. ${escapeHtml(step.title)}</strong>
+              <p class="muted">${escapeHtml(step.description)}</p>
+              <span class="erp-step-label">${escapeHtml(formatErpStepStatus(step.status))}</span>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+
+      <section class="ops-block">
+        <div class="table-header">
+          <h4>Departman Dağıtımı</h4>
+          <span class="muted">${dispatch.departments.length} hedef</span>
+        </div>
+        <div class="erp-dispatch-list">
+          ${dispatch.departments.map((bucket) => `
+            <article class="erp-dispatch-card">
+              <strong>${escapeHtml(bucket.departmentName || "Atamasız")}</strong>
+              <p class="muted">${bucket.lineCount} satır | ${bucket.totalQuantity} adet</p>
+              <p>${escapeHtml(bucket.assignees.length > 0 ? bucket.assignees.map((assignee) => assignee.fullName).join(", ") : "Atanacak kullanıcı bulunamadı")}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    </div>
+
+    <section class="ops-block">
+      <div class="table-header">
+        <div>
+          <h4>İş Emri Satırları</h4>
+          <p class="muted">Bu tablo ERP satırını, hedef departmanı ve önerilen kullanıcıları birlikte gösterir.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="erp-line-table">
+          <thead>
+            <tr>
+              <th>Satır</th>
+              <th>Parça</th>
+              <th>Adet</th>
+              <th>Süreç</th>
+              <th>Hizmet</th>
+              <th>Departman</th>
+              <th>Sorumlular</th>
+              <th>Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dispatch.lines.map((line) => `
+              <tr>
+                <td>${line.lineNo}</td>
+                <td>
+                  <div class="cell-stack">
+                    <strong>${escapeHtml(line.partCode)}</strong>
+                    <span class="muted">${escapeHtml(line.partName || "-")}</span>
+                  </div>
+                </td>
+                <td>${escapeHtml(String(line.quantity || 0))}</td>
+                <td>${escapeHtml(line.process || "-")}</td>
+                <td>${escapeHtml(line.serviceType || "-")}</td>
+                <td>
+                  <div class="cell-stack">
+                    <strong>${escapeHtml(line.departmentName || "Atamasız")}</strong>
+                    <span class="muted">${escapeHtml(line.routeReason || "-")}</span>
+                  </div>
+                </td>
+                <td>${escapeHtml(line.assignees.length > 0 ? line.assignees.map((assignee) => assignee.fullName).join(", ") : "-")}</td>
+                <td><span class="badge ${line.routeStatus === "Hazır" ? "good" : "warn"}">${escapeHtml(line.routeStatus)}</span></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 function renderAuditEvents() {
   if (!state.operations.selectedProjectId) {
     auditEventList.innerHTML = `<div class="empty-state">Audit akisini gormek icin bir proje sec.</div>`;
@@ -423,13 +687,16 @@ function renderSelectedProject() {
 
 function renderWorkflowCard(instance) {
   const canAdvance = Boolean(instance.currentStep);
+  const itemCountText = Number(instance.itemCount || 0) > 0
+    ? ` | Toplam kalem: ${instance.itemCount}`
+    : "";
 
   return `
     <article class="workflow-card">
       <div class="table-header">
         <div>
           <h4>${escapeHtml(instance.name)}</h4>
-          <p class="muted">${escapeHtml(instance.itemLabel || instance.templateName || "Genel akis")} | ${instance.steps.length} adim</p>
+          <p class="muted">${escapeHtml(instance.itemLabel || instance.templateName || "Genel akis")} | ${instance.steps.length} adim${escapeHtml(itemCountText)}</p>
         </div>
         <div class="workflow-meta">
           <span class="badge ${instance.status === "completed" ? "good" : "warn"}">${escapeHtml(instance.status)}</span>
@@ -619,6 +886,22 @@ function formatDate(value) {
   return new Date(value).toLocaleString("tr-TR");
 }
 
+function formatErpStepStatus(status) {
+  if (status === "done") {
+    return "Tamamlandı";
+  }
+
+  if (status === "ready") {
+    return "Hazır";
+  }
+
+  if (status === "attention") {
+    return "Aksiyon Gerekli";
+  }
+
+  return status || "-";
+}
+
 async function loadInitialData() {
   const results = await Promise.allSettled([
     loadFileTypeRules(),
@@ -694,6 +977,32 @@ async function loadOperationsData() {
   setOperationsStatus("Operasyon merkezi guncel.");
 }
 
+async function loadErpData() {
+  setErpStatus("ERP iş emirleri yükleniyor...");
+
+  const workOrders = await requestJson("/api/erp/work-orders");
+  state.erp.workOrders = workOrders;
+
+  const stillExists = state.erp.workOrders.some((workOrder) => workOrder.id === state.erp.selectedWorkOrderId);
+  if (!stillExists) {
+    state.erp.selectedWorkOrderId = state.erp.workOrders[0]?.id || null;
+  }
+
+  renderErpWorkOrderList();
+
+  if (!state.erp.selectedWorkOrderId) {
+    state.erp.selectedWorkOrder = null;
+    state.erp.dispatch = null;
+    renderErpSummary();
+    renderErpDetail();
+    setErpStatus("ERP iş emri bulunamadı.");
+    return;
+  }
+
+  await loadErpWorkOrder(state.erp.selectedWorkOrderId, { silent: true });
+  setErpStatus("ERP önizleme ekranı güncel.");
+}
+
 async function loadSelectedProject(projectId, options = {}) {
   state.operations.selectedProjectId = projectId;
   renderProjectList();
@@ -718,29 +1027,63 @@ async function loadSelectedProject(projectId, options = {}) {
   }
 }
 
+async function loadErpWorkOrder(workOrderId, options = {}) {
+  state.erp.selectedWorkOrderId = workOrderId;
+  renderErpWorkOrderList();
+
+  if (!options.silent) {
+    setErpStatus("ERP iş emri detayı yükleniyor...");
+  }
+
+  const detail = await requestJson(`/api/erp/work-orders/${encodeURIComponent(workOrderId)}`);
+  state.erp.selectedWorkOrder = detail;
+  state.erp.dispatch = detail.dispatch;
+
+  renderErpSummary();
+  renderErpWorkOrderList();
+  renderErpDetail();
+
+  if (!options.silent) {
+    setErpStatus(`${detail.workOrder.erpNo} için departman dağıtımı hazırlandı.`);
+  }
+}
+
 async function scanFolder() {
   if (window.location.protocol === "file:") {
-    statusText.textContent = "Bu ekran dogrudan dosya olarak acilmis. Lutfen BASLAT.bat veya npm start ile sunucuyu baslat.";
+    statusText.textContent = "Bu ekran doğrudan dosya olarak açılmış. Lütfen BASLAT.bat veya npm start ile sunucuyu başlat.";
     return;
   }
 
   scanButton.disabled = true;
-  statusText.textContent = "Tarama baslatildi...";
+  statusText.textContent = "Tarama başlatıldı...";
 
   try {
     const folder = folderInput.value.trim();
     const response = await requestJson(`/api/scan?folder=${encodeURIComponent(folder)}`);
     state.rows = response.rows;
+    state.partListBase = clonePartList(Array.isArray(response.partList) ? response.partList : []);
+    state.partList = clonePartList(state.partListBase);
     renderStats(response.summary);
     renderRows(filteredRows());
-    statusText.textContent = `${response.scannedFolder} klasoru tarandi. ${response.rows.length} dosya bulundu.`;
+    renderPartList(filteredPartList());
+    statusText.textContent = `${response.scannedFolder} klasörü tarandı. ${response.rows.length} dosya bulundu, ${state.partList.length} parça kalemi oluşturuldu.`;
   } catch (error) {
     stats.innerHTML = "";
     resultsBody.innerHTML = "";
-    statusText.textContent = `Hata: ${error.message}. Sunucunun http://127.0.0.1:3000 uzerinde calistigindan emin ol.`;
+    partListStats.innerHTML = "";
+    partListCountText.textContent = "0 kalem";
+    partListBody.innerHTML = "";
+    statusText.textContent = `Hata: ${error.message}. Sunucunun http://127.0.0.1:3000 üzerinde çalıştığından emin ol.`;
   } finally {
     scanButton.disabled = false;
   }
+}
+
+function resetPartListEdits() {
+  state.partList = clonePartList(state.partListBase);
+  partListSearchInput.value = "";
+  renderPartList(filteredPartList());
+  statusText.textContent = "Parça listesi düzenlemeleri son tarama çıktısına geri alındı.";
 }
 
 async function saveFileTypeRules() {
@@ -902,6 +1245,21 @@ function handleOverrideTableInput(event) {
   state.overrides[Number(index)][field] = value;
 }
 
+function handlePartListInput(event) {
+  const { entity, index, field } = event.target.dataset;
+  if (entity !== "partList") {
+    return;
+  }
+
+  const rawValue = event.target.value;
+  const value = field === "quantity" || field === "fileCount"
+    ? Number(rawValue || 0)
+    : rawValue;
+
+  state.partList[Number(index)][field] = value;
+  renderPartList(filteredPartList());
+}
+
 function handleBodyClick(event) {
   const actionTarget = event.target.closest("[data-action]");
   if (!actionTarget) {
@@ -980,6 +1338,23 @@ async function handleOperationsClick(event) {
     }
   } catch (error) {
     setOperationsStatus(`Islem hatasi: ${error.message}`);
+  }
+}
+
+async function handleErpClick(event) {
+  const actionTarget = event.target.closest("[data-action]");
+  if (!actionTarget) {
+    return;
+  }
+
+  if (actionTarget.dataset.action !== "select-erp-work-order") {
+    return;
+  }
+
+  try {
+    await loadErpWorkOrder(actionTarget.dataset.workOrderId);
+  } catch (error) {
+    setErpStatus(`ERP iş emri açılamadı: ${error.message}`);
   }
 }
 
@@ -1151,6 +1526,53 @@ async function exportCurrentRowsToExcel() {
   }
 }
 
+async function exportPartListToExcel() {
+  const folder = folderInput.value.trim();
+  if (!folder) {
+    statusText.textContent = "Parça listesi Excel aktarımı için önce klasör yolu gerekli.";
+    return;
+  }
+
+  if (!state.rows.length) {
+    statusText.textContent = "Parça listesi Excel aktarımı için önce tarama yap.";
+    return;
+  }
+
+  statusText.textContent = "Parça listesi Excel raporu hazırlanıyor...";
+
+  try {
+    const response = await fetch("/api/reports/workflow.xlsx", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        scannedFolder: folder,
+        summary: buildSummaryFromRows(state.rows),
+        rows: state.rows,
+        partList: state.partList,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readErrorResponse(response));
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "solid-workflow-ve-parca-listesi.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    statusText.textContent = "Parça listesi dahil Excel raporu indirildi.";
+  } catch (error) {
+    statusText.textContent = `Parça listesi Excel export hatası: ${error.message}`;
+  }
+}
+
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     headers: {
@@ -1197,6 +1619,29 @@ function extractErrorMessage(data, rawText) {
   }
 
   return "Bilinmeyen hata";
+}
+
+function buildSummaryFromRows(rows) {
+  const summary = {
+    totalFiles: rows.length,
+    assignedFiles: rows.filter((row) => row.confidence !== "Belirsiz").length,
+    uncertainFiles: rows.filter((row) => row.confidence === "Belirsiz").length,
+    byProcess: {},
+    byFileType: {},
+    byServiceType: {},
+  };
+
+  for (const row of rows) {
+    summary.byProcess[row.suggestedProcess] = (summary.byProcess[row.suggestedProcess] || 0) + 1;
+    summary.byFileType[row.fileType] = (summary.byFileType[row.fileType] || 0) + 1;
+    summary.byServiceType[row.serviceType] = (summary.byServiceType[row.serviceType] || 0) + 1;
+  }
+
+  return summary;
+}
+
+function clonePartList(partList) {
+  return JSON.parse(JSON.stringify(Array.isArray(partList) ? partList : []));
 }
 
 function getSelectedValues(select) {
@@ -1348,6 +1793,8 @@ document.querySelectorAll(".tab-button").forEach((button) => {
 
 scanButton.addEventListener("click", scanFolder);
 searchInput.addEventListener("input", () => renderRows(filteredRows()));
+partListSearchInput.addEventListener("input", () => renderPartList(filteredPartList()));
+resetPartListButton.addEventListener("click", resetPartListEdits);
 document.getElementById("saveFileTypeRulesButton").addEventListener("click", saveFileTypeRules);
 document.getElementById("saveKeywordRulesButton").addEventListener("click", saveKeywordRules);
 document.getElementById("saveOverridesButton").addEventListener("click", saveOverrides);
@@ -1358,19 +1805,32 @@ document.getElementById("refreshKeywordRulesButton").addEventListener("click", l
 document.getElementById("clearOverrideFormButton").addEventListener("click", clearOverrideForm);
 document.getElementById("exportExcelButton").addEventListener("click", exportCurrentRowsToExcel);
 document.getElementById("exportCsvButton").addEventListener("click", exportCurrentRowsToCsv);
+exportPartListExcelButton.addEventListener("click", exportPartListToExcel);
+resultViewTabs.addEventListener("click", (event) => {
+  const actionTarget = event.target.closest("[data-result-view]");
+  if (!actionTarget) {
+    return;
+  }
+
+  switchResultView(actionTarget.dataset.resultView);
+});
 fileTypeRulesBody.addEventListener("input", handleTableInput);
 fileTypeRulesBody.addEventListener("change", handleTableInput);
 keywordRulesBody.addEventListener("input", handleTableInput);
 keywordRulesBody.addEventListener("change", handleTableInput);
 overrideRulesBody.addEventListener("input", handleOverrideTableInput);
 overrideRulesBody.addEventListener("change", handleOverrideTableInput);
+partListBody.addEventListener("input", handlePartListInput);
+partListBody.addEventListener("change", handlePartListInput);
 resultsBody.addEventListener("click", handleBodyClick);
 overrideRulesBody.addEventListener("click", handleBodyClick);
 projectList.addEventListener("click", handleOperationsClick);
 userDirectory.addEventListener("click", handleOperationsClick);
 selectedProjectPanel.addEventListener("click", handleOperationsClick);
 selectedProjectPanel.addEventListener("submit", handleSelectedProjectPanelSubmit);
+erpWorkOrderList.addEventListener("click", handleErpClick);
 refreshOperationsButton.addEventListener("click", loadOperationsData);
+refreshErpButton.addEventListener("click", loadErpData);
 projectCreateForm.addEventListener("submit", handleProjectCreateSubmit);
 userCreateForm.addEventListener("submit", handleUserCreateSubmit);
 overrideForm.addEventListener("submit", (event) => {
@@ -1380,6 +1840,7 @@ overrideForm.addEventListener("submit", (event) => {
 
 window.addEventListener("load", async () => {
   try {
+    switchResultView(state.resultView);
     projectFolderInput.value = folderInput.value.trim();
     await loadInitialData();
     await scanFolder();
@@ -1388,3 +1849,6 @@ window.addEventListener("load", async () => {
     setOperationsStatus(`Hata: ${error.message}`);
   }
 });
+
+
+

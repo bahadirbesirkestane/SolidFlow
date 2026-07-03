@@ -24,6 +24,26 @@ function createHttpServer({ application, publicDir, defaultScanDir }) {
         return;
       }
 
+      if (request.method === "POST" && url.pathname === "/api/reports/workflow.xlsx") {
+        const payload = await readJsonBody(request);
+        const report = await application.exportWorkflowReport.execute(defaultScanDir, payload);
+        sendBinary(response, 200, report.fileBuffer, report.contentType, report.fileName);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/erp/work-orders") {
+        const result = await application.listErpWorkOrders.execute();
+        sendJson(response, 200, result);
+        return;
+      }
+
+      const erpWorkOrderMatch = matchPath(url.pathname, "/api/erp/work-orders/:workOrderId");
+      if (request.method === "GET" && erpWorkOrderMatch) {
+        const result = await application.getErpWorkOrderDetail.execute(erpWorkOrderMatch.workOrderId);
+        sendJson(response, 200, result);
+        return;
+      }
+
       if (request.method === "GET" && url.pathname === "/api/operations/workflow-templates") {
         const result = await application.listWorkflowTemplates.execute();
         sendJson(response, 200, result);

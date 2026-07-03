@@ -142,6 +142,92 @@ h1 {
   margin-top: 18px;
 }
 
+.results-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.results-shell-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.result-switch {
+  display: inline-flex;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(11, 110, 97, 0.08);
+}
+
+.result-tab {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+
+.result-tab.active {
+  background: var(--accent);
+  color: white;
+}
+
+.result-panel {
+  display: none;
+}
+
+.result-panel.active {
+  display: block;
+}
+
+.part-list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.part-list-note {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(11, 110, 97, 0.08);
+  color: var(--accent-strong);
+}
+
+.part-list-stats {
+  margin-top: 16px;
+}
+
+.part-list-count {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(11, 110, 97, 0.08);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.part-list-table {
+  min-width: 760px;
+  table-layout: fixed;
+}
+
+.part-list-table th:nth-child(2),
+.part-list-table td:nth-child(2) {
+  width: 24%;
+}
+
+.part-list-table .cell-stack strong,
+.part-list-table .cell-stack span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .control-row,
 .table-header,
 .section-head,
@@ -257,6 +343,16 @@ table {
   width: 100%;
   min-width: 980px;
   border-collapse: collapse;
+}
+
+#partListBody .quantity-cell {
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+#partListBody input.inline-input {
+  min-width: 110px;
+  padding: 10px 12px;
 }
 
 .ops-table {
@@ -443,6 +539,68 @@ td.boolean-cell {
   color: var(--muted);
 }
 
+.erp-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+  align-items: start;
+}
+
+.erp-main {
+  display: grid;
+  gap: 18px;
+}
+
+.erp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.erp-stage-list,
+.erp-dispatch-list {
+  display: grid;
+  gap: 12px;
+}
+
+.erp-stage,
+.erp-dispatch-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(216, 207, 191, 0.8);
+}
+
+.erp-stage.ready {
+  background: rgba(207, 231, 225, 0.55);
+}
+
+.erp-stage.attention {
+  background: rgba(251, 229, 202, 0.65);
+}
+
+.erp-step-label {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(11, 110, 97, 0.08);
+  color: var(--accent-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.erp-dispatch-card strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.erp-line-table {
+  min-width: 920px;
+}
+
 .selected-project-header {
   display: flex;
   justify-content: space-between;
@@ -569,7 +727,9 @@ td.boolean-cell {
 
   .operations-layout,
   .project-actions-grid,
-  .operations-rail {
+  .operations-rail,
+  .erp-layout,
+  .erp-grid {
     grid-template-columns: 1fr;
   }
 

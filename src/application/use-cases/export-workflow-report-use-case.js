@@ -4,8 +4,8 @@ class ExportWorkflowReportUseCase {
     this.reportExporter = reportExporter;
   }
 
-  async execute(rootPath) {
-    const reportData = await this.scanProjectUseCase.execute(rootPath);
+  async execute(rootPath, reportDataOverride) {
+    const reportData = reportDataOverride || await this.scanProjectUseCase.execute(rootPath);
     return this.reportExporter.exportWorkbook(reportData);
   }
 }

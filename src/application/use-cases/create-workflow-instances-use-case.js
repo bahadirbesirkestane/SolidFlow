@@ -41,6 +41,7 @@ class CreateWorkflowInstancesUseCase {
           serviceType: request.itemPayload?.serviceType,
           files: request.itemPayload?.files,
           partCodes: request.itemPayload?.partCodes,
+          partList: request.itemPayload?.partList,
           assignmentSignals: request.assignmentSignals,
         },
       );

@@ -44,6 +44,10 @@ const { ExportProjectOperationsReportUseCase } = require("./application/use-case
 const { JsonFileRepository } = require("./infrastructure/repositories/json-file-repository");
 const { GetAssignmentRulesUseCase } = require("./application/use-cases/get-assignment-rules-use-case");
 const { SaveAssignmentRulesUseCase } = require("./application/use-cases/save-assignment-rules-use-case");
+const { LocalErpWorkOrderRepository } = require("./infrastructure/repositories/local-erp-work-order-repository");
+const { ListErpWorkOrdersUseCase } = require("./application/use-cases/list-erp-work-orders-use-case");
+const { GetErpWorkOrderDetailUseCase } = require("./application/use-cases/get-erp-work-order-detail-use-case");
+const { ErpDispatchPlanner } = require("./application/services/erp-dispatch-planner");
 const { createHttpServer } = require("./presentation/http/server-factory");
 
 function buildApplication(rootPath) {
@@ -66,11 +70,21 @@ function buildApplication(rootPath) {
       { departmentMappings: [] },
     ),
   );
+  const erpWorkOrderRepository = new LocalErpWorkOrderRepository({
+    jsonRepository: new JsonFileRepository(
+      path.join(rootPath, "data", "erp-work-orders.json"),
+      { workOrders: [] },
+    ),
+  });
   const projectScanner = new LocalProjectScanner();
   const workflowEngine = new WorkflowEngine();
   const reportExporter = new WorkflowReportExporter(rootPath);
   const operationsReportExporter = new OperationsReportExporter(rootPath);
   const workflowAssignmentResolver = new WorkflowAssignmentResolver({
+    userRepository,
+    assignmentRuleRepository,
+  });
+  const erpDispatchPlanner = new ErpDispatchPlanner({
     userRepository,
     assignmentRuleRepository,
   });
@@ -107,6 +121,11 @@ function buildApplication(rootPath) {
     savePartOverrides: new SavePartOverridesUseCase({ partOverrideRepository }),
     getAssignmentRules: new GetAssignmentRulesUseCase({ assignmentRuleRepository }),
     saveAssignmentRules: new SaveAssignmentRulesUseCase({ assignmentRuleRepository }),
+    listErpWorkOrders: new ListErpWorkOrdersUseCase({ erpWorkOrderRepository }),
+    getErpWorkOrderDetail: new GetErpWorkOrderDetailUseCase({
+      erpWorkOrderRepository,
+      erpDispatchPlanner,
+    }),
     exportWorkflowReport: new ExportWorkflowReportUseCase({
       scanProjectUseCase,
       reportExporter,

@@ -57,6 +57,7 @@ class ScanProjectUseCase {
     return {
       scannedFolder: rootPath,
       summary: buildSummary(rows),
+      partList: buildPartList(rows),
       rows,
     };
   }
@@ -79,6 +80,42 @@ function buildSummary(rows) {
   }
 
   return summary;
+}
+
+function buildPartList(rows) {
+  const partMap = new Map();
+
+  for (const row of rows) {
+    const key = row.partCode || row.fileName;
+    if (!partMap.has(key)) {
+      partMap.set(key, {
+        partCode: row.partCode || "",
+        fileName: row.fileName,
+        mainGroup: row.mainGroup || row.folder || "",
+        suggestedProcess: row.suggestedProcess,
+        serviceType: row.serviceType,
+        quantity: 0,
+        fileCount: 0,
+        files: [],
+      });
+    }
+
+    const item = partMap.get(key);
+    item.quantity += Number(row.quantity || 1);
+    item.fileCount += 1;
+    item.files.push(row.fileName);
+
+    if (!item.partCode && row.partCode) {
+      item.partCode = row.partCode;
+    }
+  }
+
+  return Array.from(partMap.values())
+    .sort((left, right) => {
+      const leftKey = left.partCode || left.fileName;
+      const rightKey = right.partCode || right.fileName;
+      return String(leftKey).localeCompare(String(rightKey), "tr");
+    });
 }
 
 module.exports = {
