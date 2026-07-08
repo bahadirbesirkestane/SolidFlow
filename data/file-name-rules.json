@@ -1,0 +1,54 @@
+[
+  {
+    "id": "file-name-rule-sa-prefix",
+    "name": "SA öneki ile gelen dosyayı temel ada indir",
+    "patternMode": "prefix",
+    "patternValue": "SA_",
+    "replacementValue": "",
+    "process": "",
+    "serviceType": "",
+    "priority": 100,
+    "applyTo": "fileName",
+    "note": "Örnek: SA_1102_SAC.SLDPRT -> 1102_SAC.SLDPRT",
+    "isActive": true
+  },
+  {
+    "id": "file-name-rule-draft-prefix",
+    "name": "TASLAK öneki ile gelen dosyayı normal ada çevir",
+    "patternMode": "prefix",
+    "patternValue": "TASLAK_",
+    "replacementValue": "",
+    "process": "",
+    "serviceType": "",
+    "priority": 90,
+    "applyTo": "fileName",
+    "note": "Örnek: TASLAK_2100_PROFIL.SLDDRW -> 2100_PROFIL.SLDDRW",
+    "isActive": true
+  },
+  {
+    "id": "file-name-rule-mirror-template",
+    "name": "Aynalama şablonunu temel dosyaya indir",
+    "patternMode": "template",
+    "patternValue": "AYNA_<dosya>",
+    "replacementValue": "<dosya>",
+    "process": "",
+    "serviceType": "",
+    "priority": 80,
+    "applyTo": "fileName",
+    "note": "Örnek: AYNA_921_SAC.SLDPRT -> 921_SAC.SLDPRT",
+    "isActive": true
+  },
+  {
+    "id": "file-name-rule-lasercut",
+    "name": "LSR öneki kesim dış hizmetine yönlendir",
+    "patternMode": "prefix",
+    "patternValue": "LSR_",
+    "replacementValue": "",
+    "process": "Dis Hizmet",
+    "serviceType": "Lazer Kesim",
+    "priority": 110,
+    "applyTo": "fileName",
+    "note": "Örnek: LSR_3300_SAC.DXF -> dış hizmet lazer kesim akışına yönlenir.",
+    "isActive": true
+  }
+]

@@ -1,0 +1,2494 @@
+﻿const state = {
+  rows: [],
+  partList: [],
+  partListBase: [],
+  resultView: "workflow",
+  fileTypeRules: [],
+  keywordRules: [],
+  fileNameRules: [],
+  overrides: [],
+  editingOverrideId: null,
+  scanInsights: null,
+  operations: {
+    projects: [],
+    selectedProjectId: null,
+    selectedProject: null,
+    selectedUserId: null,
+    departments: [],
+    users: [],
+    templates: [],
+    openJobs: [],
+    auditEvents: [],
+    userWorkItems: [],
+  },
+  erp: {
+    workOrders: [],
+    selectedWorkOrderId: null,
+    selectedWorkOrder: null,
+    dispatch: null,
+  },
+};
+
+const apiClient = window.apiClient || {
+  buildApiUrl: (value) => value,
+  apiFetch: (value, options) => fetch(value, options),
+};
+
+const folderInput = document.getElementById("folderInput");
+const scanButton = document.getElementById("scanButton");
+const statusText = document.getElementById("statusText");
+const stats = document.getElementById("stats");
+const searchInput = document.getElementById("searchInput");
+const resultsBody = document.getElementById("resultsBody");
+const partListBody = document.getElementById("partListBody");
+const partListStats = document.getElementById("partListStats");
+const partListSearchInput = document.getElementById("partListSearchInput");
+const partListCountText = document.getElementById("partListCountText");
+const resetPartListButton = document.getElementById("resetPartListButton");
+const exportPartListExcelButton = document.getElementById("exportPartListExcelButton");
+const resultViewTabs = document.getElementById("resultViewTabs");
+const fileTypeRulesBody = document.getElementById("fileTypeRulesBody");
+const keywordRulesBody = document.getElementById("keywordRulesBody");
+const fileNameRulesBody = document.getElementById("fileNameRulesBody");
+const overrideRulesBody = document.getElementById("overrideRulesBody");
+const scanInsightsSummary = document.getElementById("scanInsightsSummary");
+const scanImpactList = document.getElementById("scanImpactList");
+const uncertainFilesList = document.getElementById("uncertainFilesList");
+const overrideForm = document.getElementById("overrideForm");
+const overrideMatchMode = document.getElementById("overrideMatchMode");
+const overridePartCode = document.getElementById("overridePartCode");
+const overrideFileName = document.getElementById("overrideFileName");
+const overrideProcess = document.getElementById("overrideProcess");
+const overrideServiceType = document.getElementById("overrideServiceType");
+const overrideNote = document.getElementById("overrideNote");
+
+const operationsStatusText = document.getElementById("operationsStatusText");
+const projectList = document.getElementById("projectList");
+const projectCountText = document.getElementById("projectCountText");
+const operationsSummary = document.getElementById("operationsSummary");
+const selectedProjectPanel = document.getElementById("selectedProjectPanel");
+const openJobsList = document.getElementById("openJobsList");
+const auditEventList = document.getElementById("auditEventList");
+const refreshOperationsButton = document.getElementById("refreshOperationsButton");
+const resetOperationsButton = document.getElementById("resetOperationsButton");
+const projectCreateForm = document.getElementById("projectCreateForm");
+const projectCodeInput = document.getElementById("projectCodeInput");
+const projectNameInput = document.getElementById("projectNameInput");
+const projectDescriptionInput = document.getElementById("projectDescriptionInput");
+const projectFolderInput = document.getElementById("projectFolderInput");
+const userCreateForm = document.getElementById("userCreateForm");
+const userFullNameInput = document.getElementById("userFullNameInput");
+const userEmailInput = document.getElementById("userEmailInput");
+const userDepartmentSelect = document.getElementById("userDepartmentSelect");
+const userDirectory = document.getElementById("userDirectory");
+const userWorkspaceUserSelect = document.getElementById("userWorkspaceUserSelect");
+const userWorkspaceStatusText = document.getElementById("userWorkspaceStatusText");
+const userWorkspaceSummary = document.getElementById("userWorkspaceSummary");
+const userWorkspaceList = document.getElementById("userWorkspaceList");
+const loadUserWorkspaceButton = document.getElementById("loadUserWorkspaceButton");
+const resetUserWorkspaceButton = document.getElementById("resetUserWorkspaceButton");
+const erpStatusText = document.getElementById("erpStatusText");
+const erpWorkOrderList = document.getElementById("erpWorkOrderList");
+const erpWorkOrderCountText = document.getElementById("erpWorkOrderCountText");
+const erpSummary = document.getElementById("erpSummary");
+const erpDetailPanel = document.getElementById("erpDetailPanel");
+const refreshErpButton = document.getElementById("refreshErpButton");
+const resetErpButton = document.getElementById("resetErpButton");
+const resetWorkflowButton = document.getElementById("resetWorkflowButton");
+const resetFileTypeRulesButton = document.getElementById("resetFileTypeRulesButton");
+const resetKeywordRulesButton = document.getElementById("resetKeywordRulesButton");
+const resetFileNameRulesButton = document.getElementById("resetFileNameRulesButton");
+const resetOverridesButton = document.getElementById("resetOverridesButton");
+
+function switchPage(pageName) {
+  document.querySelectorAll(".sidebar-link").forEach((button) => {
+    button.classList.toggle("active", button.dataset.pageLink === pageName);
+  });
+
+  document.querySelectorAll(".page-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.page === pageName);
+  });
+}
+
+function switchResultView(viewName) {
+  state.resultView = viewName === "parts" ? "parts" : "workflow";
+
+  document.querySelectorAll("[data-result-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.resultView === state.resultView);
+  });
+
+  document.querySelectorAll("[data-result-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.resultPanel === state.resultView);
+  });
+}
+
+function setOperationsStatus(message) {
+  operationsStatusText.textContent = message;
+}
+
+function setErpStatus(message) {
+  erpStatusText.textContent = message;
+}
+
+function setUserWorkspaceStatus(message) {
+  userWorkspaceStatusText.textContent = message;
+}
+
+function clearWorkflowView() {
+  state.rows = [];
+  state.partList = [];
+  state.partListBase = [];
+  state.scanInsights = null;
+  searchInput.value = "";
+  partListSearchInput.value = "";
+  stats.innerHTML = "";
+  resultsBody.innerHTML = "";
+  partListStats.innerHTML = "";
+  partListCountText.textContent = "0 kalem";
+  renderRows([]);
+  renderPartList([]);
+  renderScanInsights(null);
+  statusText.textContent = "Tarama sonuçları sıfırlandı. Yeniden ölçüm için Tara butonunu kullan.";
+}
+
+function clearOperationsView() {
+  state.operations.projects = [];
+  state.operations.selectedProjectId = null;
+  state.operations.selectedProject = null;
+  state.operations.selectedUserId = null;
+  state.operations.departments = [];
+  state.operations.users = [];
+  state.operations.templates = [];
+  state.operations.openJobs = [];
+  state.operations.auditEvents = [];
+  state.operations.userWorkItems = [];
+  renderOperationsSummary();
+  renderProjectList();
+  renderUserManagement();
+  renderOpenJobs();
+  renderSelectedProject();
+  renderAuditEvents();
+  renderUserWorkspace();
+  setOperationsStatus("Operasyon verileri sıfırlandı. Görmek için Operasyon Verisini Yükle.");
+}
+
+function clearUserWorkspaceView() {
+  state.operations.selectedUserId = "";
+  state.operations.userWorkItems = [];
+  userWorkspaceUserSelect.value = "";
+  renderUserWorkspace();
+  setUserWorkspaceStatus("Kullanıcı ekranı sıfırlandı. Yeniden görmek için kullanıcı seçip İşleri Getir.");
+}
+
+function clearErpView() {
+  state.erp.workOrders = [];
+  state.erp.selectedWorkOrderId = null;
+  state.erp.selectedWorkOrder = null;
+  state.erp.dispatch = null;
+  renderErpSummary();
+  renderErpWorkOrderList();
+  renderErpDetail();
+  setErpStatus("ERP verileri sıfırlandı. Görmek için ERP Verisini Yükle.");
+}
+
+function clearFileTypeRulesView() {
+  state.fileTypeRules = [];
+  renderFileTypeRules();
+}
+
+function clearKeywordRulesView() {
+  state.keywordRules = [];
+  renderKeywordRules();
+}
+
+function clearFileNameRulesView() {
+  state.fileNameRules = [];
+  renderFileNameRules();
+}
+
+function clearOverridesView() {
+  state.overrides = [];
+  state.editingOverrideId = null;
+  clearOverrideForm();
+  renderOverrides();
+}
+
+function createStatCard(label, value, tone = "") {
+  return `
+    <article class="stat-card ${tone}">
+      <span class="muted">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </article>
+  `;
+}
+
+function renderStats(summary) {
+  const topProcesses = Object.entries(summary.byProcess)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(" | ");
+
+  const topServices = Object.entries(summary.byServiceType)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(" | ");
+
+  stats.innerHTML = [
+    createStatCard("Toplam dosya", summary.totalFiles),
+    createStatCard("Surec atanmis", summary.assignedFiles),
+    createStatCard("Belirsiz", summary.uncertainFiles, "warning"),
+    createStatCard("Surecler", topProcesses || "-"),
+    createStatCard("Hizmetler", topServices || "-"),
+  ].join("");
+}
+
+function renderRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    resultsBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="muted">Henüz iş akışı sonucu yok. Ölçüm için Tara butonunu kullan.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  resultsBody.innerHTML = rows.map((row) => {
+    const badgeClass = row.confidence === "Belirsiz" ? "warn" : "good";
+    return `
+      <tr>
+        <td>${escapeHtml(row.partCode || "-")}</td>
+        <td>
+          <div class="cell-stack">
+            <strong>${escapeHtml(row.fileName)}</strong>
+            <span class="muted">${escapeHtml(row.folder)}</span>
+            ${row.fileNameRule ? `<span class="muted">Dosya adı kuralı: ${escapeHtml(row.fileNameRule.name)} -> ${escapeHtml(row.fileNameRule.effectiveFileName)}</span>` : ""}
+          </div>
+        </td>
+        <td>${escapeHtml(row.fileType)}</td>
+        <td>${escapeHtml(row.mainGroup || "-")}</td>
+        <td>${escapeHtml(row.suggestedProcess)}</td>
+        <td>${escapeHtml(row.serviceType)}</td>
+        <td><span class="badge ${badgeClass}">${escapeHtml(row.confidence)}</span></td>
+        <td>
+          <button class="link-button" data-action="prefill-override" data-part-code="${escapeAttribute(row.partCode || "")}" data-file-name="${escapeAttribute(row.fileName)}" data-process="${escapeAttribute(row.suggestedProcess)}" data-service-type="${escapeAttribute(row.serviceType)}">
+            Override
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function filteredPartList() {
+  const query = partListSearchInput.value.trim().toLocaleLowerCase("tr");
+  if (!query) {
+    return state.partList.map((item, index) => ({ ...item, _sourceIndex: index }));
+  }
+
+  return state.partList.flatMap((item, index) => {
+    const haystack = [
+      item.partCode,
+      item.fileName,
+      item.mainGroup,
+      item.suggestedProcess,
+      item.serviceType,
+      item.note,
+    ].join(" ").toLocaleLowerCase("tr");
+
+    return haystack.includes(query) ? [{ ...item, _sourceIndex: index }] : [];
+  });
+}
+
+function renderPartListStats(partList) {
+  const totalQuantity = partList.reduce((total, item) => total + Number(item.quantity || 0), 0);
+  const distinctGroups = new Set(partList.map((item) => item.mainGroup).filter(Boolean)).size;
+  const notedCount = partList.filter((item) => String(item.note || "").trim()).length;
+
+  partListStats.innerHTML = [
+    createStatCard("Parça kalemi", String(partList.length)),
+    createStatCard("Toplam adet", String(totalQuantity)),
+    createStatCard("Ana grup", String(distinctGroups || 0)),
+    createStatCard("Not girilen", String(notedCount || 0)),
+  ].join("");
+}
+
+function renderPartList(partList) {
+  if (!Array.isArray(partList) || partList.length === 0) {
+    partListStats.innerHTML = "";
+    partListCountText.textContent = "0 kalem";
+    partListBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="muted">Parça listesi henüz oluşmadı. Önce klasör taraması yap.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  partListCountText.textContent = partList.length === state.partList.length
+    ? `${partList.length} kalem`
+    : `${partList.length} / ${state.partList.length} kalem`;
+  renderPartListStats(partList);
+
+  partListBody.innerHTML = partList.map((item, index) => `
+    <tr>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="partCode" value="${escapeAttribute(item.partCode || "")}" placeholder="Parça Kodu" /></td>
+      <td>
+        <div class="cell-stack">
+          <strong>${escapeHtml(item.fileName || "-")}</strong>
+          <span class="muted">${escapeHtml(item.files?.join(", ") || item.fileName || "-")}</span>
+        </div>
+      </td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="mainGroup" value="${escapeAttribute(item.mainGroup || "")}" placeholder="Ana Grup" /></td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="suggestedProcess" value="${escapeAttribute(item.suggestedProcess || "")}" placeholder="Süreç" /></td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="serviceType" value="${escapeAttribute(item.serviceType || "")}" placeholder="Hizmet" /></td>
+      <td><input class="inline-input quantity-cell" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="quantity" type="number" min="0" value="${escapeAttribute(String(item.quantity || 0))}" /></td>
+      <td>${escapeHtml(String(item.fileCount || 0))}</td>
+      <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="note" value="${escapeAttribute(item.note || "")}" placeholder="Opsiyonel not" /></td>
+    </tr>
+  `).join("");
+}
+
+function filteredRows() {
+  const query = searchInput.value.trim().toLocaleLowerCase("tr");
+  if (!query) {
+    return state.rows;
+  }
+
+  return state.rows.filter((row) => {
+    const haystack = [
+      row.partCode,
+      row.fileName,
+      row.fileType,
+      row.mainGroup,
+      row.suggestedProcess,
+      row.serviceType,
+      row.folder,
+    ].join(" ").toLocaleLowerCase("tr");
+
+    return haystack.includes(query);
+  });
+}
+
+function renderFileTypeRules() {
+  if (state.fileTypeRules.length === 0) {
+    fileTypeRulesBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="muted">Henüz dosya tipi verisi yüklenmedi veya kayıt bulunmuyor.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  fileTypeRulesBody.innerHTML = state.fileTypeRules.map((rule, index) => `
+    <tr>
+      <td><input class="inline-input" data-entity="fileTypeRule" data-index="${index}" data-field="extension" value="${escapeAttribute(rule.extension)}" /></td>
+      <td><input class="inline-input" data-entity="fileTypeRule" data-index="${index}" data-field="displayName" value="${escapeAttribute(rule.displayName)}" /></td>
+      <td><input class="inline-input" data-entity="fileTypeRule" data-index="${index}" data-field="defaultProcess" value="${escapeAttribute(rule.defaultProcess)}" /></td>
+      <td><input class="inline-input" data-entity="fileTypeRule" data-index="${index}" data-field="defaultServiceType" value="${escapeAttribute(rule.defaultServiceType)}" /></td>
+      <td class="boolean-cell"><input type="checkbox" data-entity="fileTypeRule" data-index="${index}" data-field="isActive" ${rule.isActive ? "checked" : ""} /></td>
+    </tr>
+  `).join("");
+}
+
+function renderKeywordRules() {
+  if (state.keywordRules.length === 0) {
+    keywordRulesBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="muted">Henüz keyword verisi yüklenmedi veya kayıt bulunmuyor.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  keywordRulesBody.innerHTML = state.keywordRules.map((rule, index) => `
+    <tr>
+      <td><input class="inline-input" data-entity="keywordRule" data-index="${index}" data-field="keyword" value="${escapeAttribute(rule.keyword)}" /></td>
+      <td><input class="inline-input" data-entity="keywordRule" data-index="${index}" data-field="process" value="${escapeAttribute(rule.process)}" /></td>
+      <td><input class="inline-input" data-entity="keywordRule" data-index="${index}" data-field="serviceType" value="${escapeAttribute(rule.serviceType)}" /></td>
+      <td>
+        <select class="inline-input" data-entity="keywordRule" data-index="${index}" data-field="matchTarget">
+          <option value="fileName" ${rule.matchTarget === "fileName" ? "selected" : ""}>Dosya Adi</option>
+          <option value="path" ${rule.matchTarget === "path" ? "selected" : ""}>Yol</option>
+        </select>
+      </td>
+      <td class="boolean-cell"><input type="checkbox" data-entity="keywordRule" data-index="${index}" data-field="isActive" ${rule.isActive ? "checked" : ""} /></td>
+    </tr>
+  `).join("");
+}
+
+function renderFileNameRules() {
+  if (state.fileNameRules.length === 0) {
+    fileNameRulesBody.innerHTML = `
+      <tr>
+        <td colspan="10" class="muted">Henüz dosya adı kuralı yüklenmedi veya kayıt bulunmuyor.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  fileNameRulesBody.innerHTML = state.fileNameRules.map((rule, index) => `
+    <tr>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="name" value="${escapeAttribute(rule.name || "")}" /></td>
+      <td>
+        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternMode">
+          <option value="prefix" ${rule.patternMode === "prefix" ? "selected" : ""}>Ön Ek</option>
+          <option value="suffix" ${rule.patternMode === "suffix" ? "selected" : ""}>Son Ek</option>
+          <option value="contains" ${rule.patternMode === "contains" ? "selected" : ""}>İçerir</option>
+          <option value="template" ${rule.patternMode === "template" ? "selected" : ""}>Şablon</option>
+          <option value="regex" ${rule.patternMode === "regex" ? "selected" : ""}>Regex</option>
+        </select>
+      </td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternValue" value="${escapeAttribute(rule.patternValue || "")}" placeholder="Örnek: SA_" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="replacementValue" value="${escapeAttribute(rule.replacementValue || "")}" placeholder="Boş bırakılırsa yakalanan değer kullanılır" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="process" value="${escapeAttribute(rule.process || "")}" placeholder="Opsiyonel süreç" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="serviceType" value="${escapeAttribute(rule.serviceType || "")}" placeholder="Opsiyonel hizmet" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="priority" type="number" value="${escapeAttribute(String(rule.priority || 0))}" /></td>
+      <td>
+        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="applyTo">
+          <option value="fileName" ${rule.applyTo === "fileName" ? "selected" : ""}>Tam Dosya Adı</option>
+          <option value="baseName" ${rule.applyTo === "baseName" ? "selected" : ""}>Uzantısız Ad</option>
+        </select>
+      </td>
+      <td class="boolean-cell"><input type="checkbox" data-entity="fileNameRule" data-index="${index}" data-field="isActive" ${rule.isActive ? "checked" : ""} /></td>
+      <td><button class="secondary link-button" data-action="delete-file-name-rule" data-index="${index}">Sil</button></td>
+    </tr>
+  `).join("");
+}
+
+function renderScanInsights(insights) {
+  if (!insights) {
+    scanInsightsSummary.innerHTML = "";
+    scanImpactList.innerHTML = `<div class="empty-state">Tarama sonrası kalite ve kural etkisi burada gösterilir.</div>`;
+    uncertainFilesList.innerHTML = `<div class="empty-state">Belirsiz dosya listesi için önce tarama yap.</div>`;
+    return;
+  }
+
+  scanInsightsSummary.innerHTML = [
+    createStatCard("Belirsiz", String(insights.quality.uncertainFiles), insights.quality.uncertainFiles > 0 ? "warning" : ""),
+    createStatCard("Dönüştürülen ad", String(insights.quality.transformedFiles)),
+    createStatCard("Manuel override", String(insights.quality.manualOverrides)),
+    createStatCard("Kesin eşleşme", String(insights.quality.exactMatches)),
+    createStatCard("Tahmini eşleşme", String(insights.quality.estimatedMatches)),
+  ].join("");
+
+  const impactSections = [
+    createInsightSection("Karar Kaynakları", insights.matchedBy),
+    createInsightSection("Güven Dağılımı", insights.confidenceCounts),
+    createInsightSection("Dosya Adı Kuralı Etkisi", insights.fileNameRuleHits),
+  ].filter(Boolean);
+
+  scanImpactList.innerHTML = impactSections.join("") || `<div class="empty-state">Henüz kural etkisi kaydı yok.</div>`;
+
+  if (!Array.isArray(insights.uncertainRows) || insights.uncertainRows.length === 0) {
+    uncertainFilesList.innerHTML = `<div class="empty-state">Belirsiz dosya kalmadı.</div>`;
+    return;
+  }
+
+  uncertainFilesList.innerHTML = insights.uncertainRows.map((row) => `
+    <article class="insight-card">
+      <strong>${escapeHtml(row.fileName)}</strong>
+      <p class="muted">${escapeHtml(row.folder || "-")}</p>
+      <span class="muted">Son karar: ${escapeHtml(row.matchedBy || "Kural Yok")}</span>
+    </article>
+  `).join("");
+}
+
+function createInsightSection(title, collection) {
+  const entries = Object.entries(collection || {}).sort((left, right) => right[1] - left[1]);
+  if (entries.length === 0) {
+    return "";
+  }
+
+  return `
+    <article class="insight-card">
+      <strong>${escapeHtml(title)}</strong>
+      <div class="cell-stack">
+        ${entries.map(([key, value]) => `<span>${escapeHtml(key)}: <strong>${escapeHtml(String(value))}</strong></span>`).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderOverrides() {
+  if (state.overrides.length === 0) {
+    overrideRulesBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="muted">Henüz override verisi yüklenmedi veya kayıt bulunmuyor.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  overrideRulesBody.innerHTML = state.overrides.map((override, index) => `
+    <tr>
+      <td>${escapeHtml(override.matchMode === "fileName" ? "Dosya Adi" : "Parca Kodu")}</td>
+      <td>${escapeHtml(override.matchMode === "fileName" ? override.fileName : override.partCode)}</td>
+      <td>${escapeHtml(override.process)}</td>
+      <td>${escapeHtml(override.serviceType)}</td>
+      <td>${escapeHtml(override.note || "-")}</td>
+      <td class="boolean-cell"><input type="checkbox" data-entity="override" data-index="${index}" data-field="isActive" ${override.isActive ? "checked" : ""} /></td>
+      <td><button class="secondary link-button" data-action="edit-override" data-index="${index}">Duzenle</button></td>
+      <td><button class="secondary link-button" data-action="delete-override" data-index="${index}">Sil</button></td>
+    </tr>
+  `).join("");
+}
+
+function renderOperationsSummary() {
+  const users = state.operations.users.filter((user) => user.isActive);
+  const projects = state.operations.projects;
+  const totalWorkflows = projects.reduce((accumulator, project) => accumulator + (project.progress?.totalInstances || 0), 0);
+  const totalSteps = projects.reduce((accumulator, project) => accumulator + (project.progress?.totalSteps || 0), 0);
+  const completedSteps = projects.reduce((accumulator, project) => accumulator + (project.progress?.completedSteps || 0), 0);
+  const overallPercentage = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
+
+  operationsSummary.innerHTML = [
+    createStatCard("Aktif proje", String(projects.length)),
+    createStatCard("Aktif kullanici", String(users.length)),
+    createStatCard("Workflow", String(totalWorkflows)),
+    createStatCard("Tamamlanan adim", `${completedSteps}/${totalSteps}`),
+    createStatCard("Genel ilerleme", `%${overallPercentage}`, overallPercentage < 50 ? "warning" : ""),
+    createStatCard("Acik is", String(state.operations.openJobs.length), state.operations.openJobs.length > 0 ? "warning" : ""),
+  ].join("");
+}
+
+function renderProjectList() {
+  const selectedProjectId = state.operations.selectedProjectId;
+  projectCountText.textContent = `${state.operations.projects.length} proje`;
+
+  if (state.operations.projects.length === 0) {
+    projectList.innerHTML = `<div class="empty-state">Henuz proje yok. Soldaki formdan ilk projeyi olustur.</div>`;
+    return;
+  }
+
+  projectList.innerHTML = state.operations.projects.map((project) => `
+    <button class="project-card ${project.id === selectedProjectId ? "active" : ""}" data-action="select-project" data-project-id="${project.id}">
+      <div class="cell-stack">
+        <strong>${escapeHtml(project.code)} - ${escapeHtml(project.name)}</strong>
+        <span class="muted">${escapeHtml(project.description || "Aciklama yok")}</span>
+      </div>
+      <div class="project-card-meta">
+        <span class="badge ${project.progress?.completionPercentage >= 100 ? "good" : "warn"}">%${project.progress?.completionPercentage || 0}</span>
+        <span class="muted">${project.progress?.totalInstances || 0} akis</span>
+      </div>
+    </button>
+  `).join("");
+}
+
+function renderUserManagement() {
+  const departmentOptions = state.operations.departments.map((department) => `
+    <option value="${escapeAttribute(department.id)}">${escapeHtml(department.name)}</option>
+  `).join("");
+
+  userDepartmentSelect.innerHTML = departmentOptions || `<option value="">Departman bulunamadi</option>`;
+
+  if (state.operations.departments.length === 0) {
+    userDirectory.innerHTML = `<div class="empty-state">Departman verisi bulunamadi.</div>`;
+    return;
+  }
+
+  userDirectory.innerHTML = state.operations.departments.map((department) => {
+    const users = state.operations.users.filter((user) => user.departmentId === department.id);
+    return `
+      <section class="dept-card">
+        <div class="table-header">
+          <strong>${escapeHtml(department.name)}</strong>
+          <span class="muted">${users.length} kisi</span>
+        </div>
+        ${users.length === 0 ? `<p class="muted">Bu departmanda kullanici yok.</p>` : users.map((user) => `
+          <div class="user-row">
+            <div class="cell-stack">
+              <strong>${escapeHtml(user.fullName)}</strong>
+              <span class="muted">${escapeHtml(user.email || "E-posta yok")}</span>
+            </div>
+            <div class="inline-actions">
+              <span class="badge ${user.isActive ? "good" : "warn"}">${user.isActive ? "Aktif" : "Pasif"}</span>
+              ${user.isActive ? `<button class="secondary link-button" data-action="deactivate-user" data-user-id="${user.id}">Sil</button>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </section>
+    `;
+  }).join("");
+
+  const activeUsers = state.operations.users.filter((user) => user.isActive);
+  userWorkspaceUserSelect.innerHTML = `
+    <option value="">Önce kullanıcı seç</option>
+    ${activeUsers.map((user) => `
+      <option value="${escapeAttribute(user.id)}" ${user.id === state.operations.selectedUserId ? "selected" : ""}>
+        ${escapeHtml(user.fullName)}${user.departmentName ? ` - ${escapeHtml(user.departmentName)}` : ""}
+      </option>
+    `).join("")}
+  `;
+}
+
+function renderOpenJobs() {
+  const selectedProjectId = state.operations.selectedProjectId;
+  const jobs = selectedProjectId
+    ? state.operations.openJobs.filter((job) => job.projectId === selectedProjectId)
+    : state.operations.openJobs;
+
+  if (jobs.length === 0) {
+    openJobsList.innerHTML = `<div class="empty-state">Acik is bulunmuyor.</div>`;
+    return;
+  }
+
+  openJobsList.innerHTML = jobs.map((job) => `
+    <article class="feed-card">
+      <div class="table-header">
+        <strong>${escapeHtml(job.title)}</strong>
+        <span class="badge warn">${escapeHtml(job.status)}</span>
+      </div>
+      <p>${escapeHtml(job.description || "Aciklama yok")}</p>
+      <p class="muted">Kaynak: ${escapeHtml(job.sourceType)} | Sira: ${escapeHtml(job.payload?.sequenceNo || "-")}</p>
+      <p class="muted">Olusturulma: ${formatDate(job.createdAt)}</p>
+    </article>
+  `).join("");
+}
+
+function renderErpSummary() {
+  const totalOrders = state.erp.workOrders.length;
+  const totalLines = state.erp.workOrders.reduce((total, workOrder) => total + Number(workOrder.lineCount || 0), 0);
+  const totalQuantity = state.erp.workOrders.reduce((total, workOrder) => total + Number(workOrder.totalQuantity || 0), 0);
+  const selectedReadyLines = Number(state.erp.dispatch?.summary?.readyLines || 0);
+  const selectedWaitingLines = Number(state.erp.dispatch?.summary?.waitingLines || 0);
+
+  erpSummary.innerHTML = [
+    createStatCard("ERP iş emri", String(totalOrders)),
+    createStatCard("Toplam satır", String(totalLines)),
+    createStatCard("Toplam adet", String(totalQuantity)),
+    createStatCard("Hazır yönlendirme", String(selectedReadyLines)),
+    createStatCard("Kural bekleyen", String(selectedWaitingLines), selectedWaitingLines > 0 ? "warning" : ""),
+  ].join("");
+}
+
+function renderErpWorkOrderList() {
+  erpWorkOrderCountText.textContent = `${state.erp.workOrders.length} emir`;
+
+  if (state.erp.workOrders.length === 0) {
+    erpWorkOrderList.innerHTML = `<div class="empty-state">Henüz ERP iş emri bulunmuyor.</div>`;
+    return;
+  }
+
+  erpWorkOrderList.innerHTML = state.erp.workOrders.map((workOrder) => `
+    <button class="project-card ${workOrder.id === state.erp.selectedWorkOrderId ? "active" : ""}" data-action="select-erp-work-order" data-work-order-id="${workOrder.id}">
+      <div class="cell-stack">
+        <strong>${escapeHtml(workOrder.erpNo)}</strong>
+        <span class="muted">${escapeHtml(workOrder.projectCode)} | ${escapeHtml(workOrder.customerName || "-")}</span>
+        <span class="muted">Teslim: ${escapeHtml(formatDate(workOrder.dueDate))}</span>
+      </div>
+      <div class="project-card-meta">
+        <span class="badge ${workOrder.status === "Planlandı" ? "warn" : "good"}">${escapeHtml(workOrder.status)}</span>
+        <span class="muted">${workOrder.lineCount} satır</span>
+      </div>
+    </button>
+  `).join("");
+}
+
+function renderErpDetail() {
+  if (!state.erp.selectedWorkOrder || !state.erp.dispatch) {
+    erpDetailPanel.innerHTML = "ERP detayını açmak için soldan bir iş emri seç.";
+    return;
+  }
+
+  const { workOrder } = state.erp.selectedWorkOrder;
+  const { dispatch } = state.erp;
+
+  erpDetailPanel.innerHTML = `
+    <div class="selected-project-header">
+      <div>
+        <p class="eyebrow">${escapeHtml(workOrder.erpNo)}</p>
+        <h3>${escapeHtml(workOrder.projectCode)} - ${escapeHtml(workOrder.customerName || "Müşteri bilgisi yok")}</h3>
+        <p class="muted">${escapeHtml(workOrder.note || "ERP açıklaması girilmemiş")}</p>
+      </div>
+      <div class="project-progress-card">
+        <strong>${dispatch.summary.readyLines}/${dispatch.summary.totalLines}</strong>
+        <span class="muted">Hazır yönlendirme satırı</span>
+      </div>
+    </div>
+
+      <div class="inline-actions top-export-actions">
+        <span class="muted">Kaynak: ${escapeHtml(workOrder.sourceType || "mock")} | Termin: ${escapeHtml(formatDate(workOrder.dueDate))}</span>
+        <div class="inline-actions">
+          ${workOrder.linkedProjectCode ? `<span class="muted">Bağlı Proje: ${escapeHtml(workOrder.linkedProjectCode)}</span>` : ""}
+          <button
+            class="secondary"
+            data-action="start-erp-operation"
+            data-work-order-id="${escapeAttribute(workOrder.id)}"
+            ${workOrder.linkedProjectId ? "disabled" : ""}
+          >
+            ${workOrder.linkedProjectId ? "Operasyona Aktarıldı" : "Operasyonu Başlat"}
+          </button>
+          <span class="badge ${dispatch.summary.waitingLines > 0 ? "warn" : "good"}">${dispatch.summary.waitingLines > 0 ? "Kural Bekliyor" : "Dağıtıma Hazır"}</span>
+        </div>
+      </div>
+
+    <div class="erp-grid">
+      <section class="ops-block">
+        <div class="table-header">
+          <h4>ERP'den Operasyona Geçiş</h4>
+          <span class="muted">${dispatch.nextSteps.length} adım</span>
+        </div>
+        <div class="erp-stage-list">
+          ${dispatch.nextSteps.map((step, index) => `
+            <article class="erp-stage ${step.status}">
+              <strong>${index + 1}. ${escapeHtml(step.title)}</strong>
+              <p class="muted">${escapeHtml(step.description)}</p>
+              <span class="erp-step-label">${escapeHtml(formatErpStepStatus(step.status))}</span>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+
+      <section class="ops-block">
+        <div class="table-header">
+          <h4>Departman Dağıtımı</h4>
+          <span class="muted">${dispatch.departments.length} hedef</span>
+        </div>
+        <div class="erp-dispatch-list">
+          ${dispatch.departments.map((bucket) => `
+            <article class="erp-dispatch-card">
+              <strong>${escapeHtml(bucket.departmentName || "Atamasız")}</strong>
+              <p class="muted">${bucket.lineCount} satır | ${bucket.totalQuantity} adet</p>
+              <p>${escapeHtml(bucket.assignees.length > 0 ? bucket.assignees.map((assignee) => assignee.fullName).join(", ") : "Atanacak kullanıcı bulunamadı")}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    </div>
+
+    <section class="ops-block">
+      <div class="table-header">
+        <div>
+          <h4>İş Emri Satırları</h4>
+          <p class="muted">Bu tablo ERP satırını, hedef departmanı ve önerilen kullanıcıları birlikte gösterir.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="erp-line-table">
+          <thead>
+            <tr>
+              <th>Satır</th>
+              <th>Parça</th>
+              <th>Adet</th>
+              <th>Süreç</th>
+              <th>Hizmet</th>
+              <th>Departman</th>
+              <th>Sorumlular</th>
+              <th>Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dispatch.lines.map((line) => `
+              <tr>
+                <td>${line.lineNo}</td>
+                <td>
+                  <div class="cell-stack">
+                    <strong>${escapeHtml(line.partCode)}</strong>
+                    <span class="muted">${escapeHtml(line.partName || "-")}</span>
+                  </div>
+                </td>
+                <td>${escapeHtml(String(line.quantity || 0))}</td>
+                <td>${escapeHtml(line.process || "-")}</td>
+                <td>${escapeHtml(line.serviceType || "-")}</td>
+                <td>
+                  <div class="cell-stack">
+                    <strong>${escapeHtml(line.departmentName || "Atamasız")}</strong>
+                    <span class="muted">${escapeHtml(line.routeReason || "-")}</span>
+                  </div>
+                </td>
+                <td>${escapeHtml(line.assignees.length > 0 ? line.assignees.map((assignee) => assignee.fullName).join(", ") : "-")}</td>
+                <td><span class="badge ${line.routeStatus === "Hazır" ? "good" : "warn"}">${escapeHtml(line.routeStatus)}</span></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderAuditEvents() {
+  if (!state.operations.selectedProjectId) {
+    auditEventList.innerHTML = `<div class="empty-state">Audit akisini gormek icin bir proje sec.</div>`;
+    return;
+  }
+
+  if (state.operations.auditEvents.length === 0) {
+    auditEventList.innerHTML = `<div class="empty-state">Secili proje icin audit kaydi yok.</div>`;
+    return;
+  }
+
+  auditEventList.innerHTML = state.operations.auditEvents.slice(0, 6).map((event) => `
+    <article class="feed-card">
+      <div class="table-header">
+        <strong>${escapeHtml(event.action)}</strong>
+        <span class="muted">${escapeHtml(event.entityType)}</span>
+      </div>
+      <p class="muted">${formatDate(event.createdAt)}</p>
+      <p>${escapeHtml(summarizeAuditPayload(event.payload))}</p>
+    </article>
+  `).join("");
+}
+
+function renderUserWorkspace() {
+  const selectedUserId = state.operations.selectedUserId || "";
+  const selectedUser = state.operations.users.find((user) => user.id === selectedUserId) || null;
+  const items = Array.isArray(state.operations.userWorkItems) ? state.operations.userWorkItems : [];
+
+  if (userWorkspaceUserSelect.value !== selectedUserId) {
+    userWorkspaceUserSelect.value = selectedUserId;
+  }
+
+  if (!selectedUser) {
+    userWorkspaceSummary.innerHTML = [
+      createStatCard("Seçili kullanıcı", "0"),
+      createStatCard("Aktif iş", "0"),
+      createStatCard("Devre hazır", "0"),
+      createStatCard("Tamamlanacak akış", "0"),
+    ].join("");
+    userWorkspaceList.innerHTML = `<div class="empty-state">Kullanıcı seçip İşleri Getir butonuna bas.</div>`;
+    return;
+  }
+
+  const readyCount = items.filter((item) => item.currentStep.status === "ready").length;
+  const inProgressCount = items.filter((item) => item.currentStep.status === "in_progress").length;
+  const handoverCount = items.filter((item) => item.nextStep).length;
+  const lastUpdated = items
+    .map((item) => item.currentStep.updatedAt || item.workflow.updatedAt || "")
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+  userWorkspaceSummary.innerHTML = [
+    createStatCard("Seçili kullanıcı", selectedUser.fullName),
+    createStatCard("Aktif iş", String(items.length), items.length > 0 ? "" : "warning"),
+    createStatCard("Hazır iş", String(readyCount)),
+    createStatCard("İşlemde", String(inProgressCount)),
+    createStatCard("Devir bekleyen", String(handoverCount), handoverCount > 0 ? "" : "warning"),
+    createStatCard("Son hareket", lastUpdated ? formatDate(lastUpdated) : "-"),
+  ].join("");
+
+  if (items.length === 0) {
+    userWorkspaceList.innerHTML = `
+      <div class="empty-state">
+        ${escapeHtml(selectedUser.fullName)} için atanmış aktif iş bulunmuyor.
+      </div>
+    `;
+    return;
+  }
+
+  userWorkspaceList.innerHTML = items.map((item) => renderUserTaskCard(item, selectedUser)).join("");
+}
+
+function renderUserTaskCard(item, selectedUser) {
+  const nextAssigneeIds = item.nextStep?.assigneeIds || [];
+  const nextAssigneeNames = item.nextStep
+    ? formatAssigneeNames(item.nextStep.assigneeIds, item.nextStep.assignee)
+    : "Bu akışın sonraki adımı yok";
+  const actionOptions = [
+    "Onaylandı",
+    "İç hizmete alındı",
+    "Dış hizmete gönderildi",
+    "Liste kontrol tamamlandı",
+    "Kalite kontrol tamamlandı",
+    "Bir sonraki adıma devredildi",
+  ];
+
+  return `
+    <article class="user-task-card" data-instance-id="${escapeAttribute(item.workflow.id)}">
+      <div class="table-header">
+        <div class="cell-stack">
+          <p class="eyebrow">${escapeHtml(item.project.code)}</p>
+          <h3>${escapeHtml(item.workflow.name)}</h3>
+          <span class="muted">${escapeHtml(item.project.name)} | ${escapeHtml(item.workflow.itemLabel || item.workflow.templateName || "Genel iş akışı")}</span>
+        </div>
+        <div class="workflow-meta">
+          <span class="badge ${item.currentStep.status === "in_progress" ? "warn" : "good"}">${escapeHtml(formatTaskStatus(item.currentStep.status))}</span>
+          <strong>%${item.workflow.progressPercent}</strong>
+        </div>
+      </div>
+
+      <div class="user-task-grid">
+        <div class="user-task-info">
+          <div class="task-detail-card">
+            <span class="muted">Aktif adım</span>
+            <strong>${escapeHtml(`${item.currentStep.sequenceNo}. ${item.currentStep.name}`)}</strong>
+            <span>${escapeHtml(item.currentStep.description || "Açıklama girilmemiş")}</span>
+          </div>
+          <div class="task-detail-card">
+            <span class="muted">Parça / kalem</span>
+            <strong>${escapeHtml(item.workflow.itemLabel || item.workflow.name)}</strong>
+            <span>${escapeHtml(item.workflow.itemCount ? `${item.workflow.itemCount} adet` : "Adet bilgisi yok")}</span>
+          </div>
+          <div class="task-detail-card">
+            <span class="muted">Sonraki adım</span>
+            <strong>${escapeHtml(item.nextStep ? `${item.nextStep.sequenceNo}. ${item.nextStep.name}` : "Akış tamamlanacak")}</strong>
+            <span>${escapeHtml(item.nextStep ? (item.nextStep.description || "Sonraki adım açıklaması yok") : "Bu onay ile iş tamamlanmış olacak")}</span>
+          </div>
+        </div>
+
+        <div class="user-task-action-panel">
+          <label>
+            Yapılan işlem
+            <select data-role="task-note-preset">
+              ${actionOptions.map((option, index) => `
+                <option value="${escapeAttribute(option)}" ${index === 0 ? "selected" : ""}>${escapeHtml(option)}</option>
+              `).join("")}
+            </select>
+          </label>
+
+          <label>
+            Sonraki sorumlular
+            <select data-role="task-next-assignees" multiple size="4" ${item.nextStep ? "" : "disabled"}>
+              ${renderUserOptions(true, nextAssigneeIds)}
+            </select>
+          </label>
+
+          <div class="task-assignee-note">
+            <strong>Önerilen devir</strong>
+            <span class="muted">${escapeHtml(nextAssigneeNames)}</span>
+          </div>
+
+          <div class="user-task-actions">
+            <span class="muted">Tamamlayan kullanıcı: ${escapeHtml(selectedUser.fullName)}</span>
+            <button
+              data-action="advance-user-task"
+              data-instance-id="${escapeAttribute(item.workflow.id)}"
+              data-next-required="${item.nextStep ? "true" : "false"}"
+            >
+              ${item.nextStep ? "Onayla ve Devret" : "İşi Tamamla"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderSelectedProject() {
+  const dashboard = state.operations.selectedProject;
+  if (!dashboard) {
+    selectedProjectPanel.innerHTML = `Yonetim ekranini acmak icin soldan bir proje sec.`;
+    return;
+  }
+
+  const project = dashboard.project;
+  const progress = dashboard.progress;
+  const currentFolderSuggestion = folderInput.value.trim();
+
+  selectedProjectPanel.innerHTML = `
+    <div class="selected-project-header">
+      <div>
+        <p class="eyebrow">${escapeHtml(project.code)}</p>
+        <h3>${escapeHtml(project.name)}</h3>
+        <p class="muted">${escapeHtml(project.description || "Aciklama girilmemis")}</p>
+      </div>
+      <div class="project-progress-card">
+        <strong>%${progress.completionPercentage}</strong>
+        <span class="muted">${progress.completedSteps}/${progress.totalSteps} adim tamamlandi</span>
+      </div>
+    </div>
+
+      <div class="inline-actions top-export-actions">
+      <span class="muted">Raporlar: workflow, adim, acik is ve audit kayitlari tek dosyada.</span>
+      <div class="inline-actions">
+        <button class="secondary" data-action="assign-project-workflows" data-project-id="${project.id}">İşleri Kullanıcılara Aktar</button>
+        <button class="secondary danger-button" data-action="delete-project" data-project-id="${project.id}">Projeyi Sil</button>
+        <button class="secondary" data-action="download-operations-report" data-format="xlsx">Excel Indir</button>
+        <button class="secondary" data-action="download-operations-report" data-format="csv">CSV Indir</button>
+        <button class="secondary" data-action="download-operations-report" data-format="pdf">PDF Indir</button>
+      </div>
+    </div>
+
+    <div class="progress-rail">
+      <div class="progress-rail-fill" style="width:${progress.completionPercentage}%"></div>
+    </div>
+
+    <div class="project-actions-grid">
+      <form id="workflowCreateForm" class="embedded-form">
+        <h4>Template ile workflow ekle</h4>
+        <div class="inline-grid">
+          <select id="workflowTemplateSelect" required>${renderTemplateOptions()}</select>
+          <input id="workflowInstanceNameInput" type="text" placeholder="Workflow adi" />
+          <input id="workflowItemLabelInput" type="text" placeholder="Kalem / Parca grubu" />
+          <input id="workflowItemCountInput" type="number" min="1" value="1" />
+        </div>
+        <button type="submit">Workflow Olustur</button>
+      </form>
+
+      <form id="projectBootstrapForm" class="embedded-form">
+        <h4>Klasorden otomatik workflow uret</h4>
+        <div class="inline-grid">
+          <input id="bootstrapFolderPathInput" type="text" value="${escapeAttribute(currentFolderSuggestion)}" placeholder="Proje klasor yolu" />
+        </div>
+        <button type="submit" class="secondary">Klasorden Uret</button>
+      </form>
+    </div>
+
+    <div class="workflow-stack">
+      ${dashboard.workflows.length === 0 ? `<div class="empty-state">Bu projede henuz workflow yok. Template secip ekleyebilir ya da klasorden otomatik uretebilirsin.</div>` : dashboard.workflows.map(renderWorkflowCard).join("")}
+    </div>
+  `;
+}
+
+function renderWorkflowCard(instance) {
+  const canAdvance = Boolean(instance.currentStep);
+  const itemCountText = Number(instance.itemCount || 0) > 0
+    ? ` | Toplam kalem: ${instance.itemCount}`
+    : "";
+
+  return `
+    <article class="workflow-card">
+      <div class="table-header">
+        <div>
+          <h4>${escapeHtml(instance.name)}</h4>
+          <p class="muted">${escapeHtml(instance.itemLabel || instance.templateName || "Genel akis")} | ${instance.steps.length} adim${escapeHtml(itemCountText)}</p>
+        </div>
+        <div class="workflow-meta">
+          <button class="secondary danger-button link-button" data-action="delete-workflow-instance" data-instance-id="${instance.id}">Akisi Sil</button>
+          <span class="badge ${instance.status === "completed" ? "good" : "warn"}">${escapeHtml(instance.status)}</span>
+          <strong>%${instance.progressPercent}</strong>
+        </div>
+      </div>
+
+      <div class="progress-rail slim">
+        <div class="progress-rail-fill" style="width:${instance.progressPercent}%"></div>
+      </div>
+
+      <div class="advance-panel">
+        <div class="cell-stack">
+          <strong>Siradaki aktif adim</strong>
+          <span class="muted">${escapeHtml(instance.currentStep ? `${instance.currentStep.sequenceNo}. ${instance.currentStep.name}` : "Tum adimlar tamamlandi")}</span>
+        </div>
+        <div class="advance-grid" data-instance-id="${instance.id}">
+          <select data-role="completed-by">
+            <option value="">Tamamlayan kisi</option>
+            ${renderUserOptions()}
+          </select>
+          <select data-role="next-assignees" multiple size="3">
+            ${renderUserOptions(true)}
+          </select>
+          <input data-role="advance-note" type="text" placeholder="Not veya devir aciklamasi" />
+          <button ${canAdvance ? "" : "disabled"} data-action="advance-instance" data-instance-id="${instance.id}">Siradaki Adima Gec</button>
+        </div>
+      </div>
+
+      <section class="quick-edit-shell">
+        <div class="table-header">
+          <div>
+            <h5>Kolay Duzenleme</h5>
+            <p class="muted">Adimlari kart gorunumunde hizlica duzenle, tek tek kaydet ve durumu kolay takip et.</p>
+          </div>
+        </div>
+        <div class="quick-step-grid">
+          ${instance.steps.map((step) => renderQuickStepCard(instance, step)).join("")}
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <table class="ops-table">
+          <thead>
+            <tr>
+              <th>Sira</th>
+              <th>Adim</th>
+              <th>Atananlar</th>
+              <th>Durum</th>
+              <th>Opsiyonel</th>
+              <th>Not</th>
+              <th>Kaydet</th>
+              <th>Sil</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${instance.steps.map((step) => renderStepRow(instance, step)).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <form class="add-step-form" data-instance-id="${instance.id}">
+        <h5>Yeni adim ekle</h5>
+        <div class="inline-grid">
+          <input data-role="new-step-name" type="text" placeholder="Adim adi" required />
+          <input data-role="new-step-description" type="text" placeholder="Aciklama" />
+          <input data-role="new-step-sequence" type="number" min="1" value="${instance.steps.length + 1}" />
+          <select data-role="new-step-status">
+            ${renderStatusOptions("pending")}
+          </select>
+          <select data-role="new-step-assignees" multiple size="3">
+            ${renderUserOptions(true)}
+          </select>
+          <label class="checkbox-inline">
+            <input data-role="new-step-optional" type="checkbox" />
+            Opsiyonel
+          </label>
+        </div>
+        <button type="submit" class="secondary">Adim Ekle</button>
+      </form>
+    </article>
+  `;
+}
+
+function renderQuickStepCard(instance, step) {
+  return `
+    <article class="quick-step-card" data-step-id="${step.id}" data-instance-id="${instance.id}">
+      <div class="table-header">
+        <strong>${step.sequenceNo}. ${escapeHtml(step.name)}</strong>
+        <span class="badge ${step.status === "completed" ? "good" : "warn"}">${escapeHtml(step.status)}</span>
+      </div>
+      <p class="muted">${escapeHtml(step.description || "Aciklama yok")}</p>
+      <div class="cell-stack">
+        <label>
+          Adim Adi
+          <input class="inline-input" data-role="step-name" value="${escapeAttribute(step.name)}" />
+        </label>
+        <label>
+          Aciklama
+          <input class="inline-input" data-role="step-description" value="${escapeAttribute(step.description || "")}" placeholder="Aciklama" />
+        </label>
+        <label>
+          Durum
+          <select class="inline-input" data-role="step-status">
+            ${renderStatusOptions(step.status)}
+          </select>
+        </label>
+        <label>
+          Sorumlular
+          <select class="inline-input multi" data-role="step-assignees" multiple size="3">
+            ${renderUserOptions(true, step.assigneeIds)}
+          </select>
+        </label>
+        <label>
+          Not
+          <input class="inline-input" data-role="step-note" value="${escapeAttribute(step.completionNote || "")}" placeholder="Kisa not" />
+        </label>
+        <label class="checkbox-inline">
+          <input data-role="step-optional" type="checkbox" ${step.isOptional ? "checked" : ""} />
+          Opsiyonel adim
+        </label>
+      </div>
+      <div class="inline-actions">
+        <span class="muted">${escapeHtml(formatAssigneeNames(step.assigneeIds, step.assignee))}</span>
+        <button class="secondary link-button" data-action="save-step-card" data-step-id="${step.id}">Karttan Kaydet</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderStepRow(instance, step) {
+  return `
+    <tr data-step-id="${step.id}" data-instance-id="${instance.id}">
+      <td>${step.sequenceNo}</td>
+      <td>
+        <div class="cell-stack">
+          <input class="inline-input" data-role="step-name" value="${escapeAttribute(step.name)}" />
+          <input class="inline-input" data-role="step-description" value="${escapeAttribute(step.description || "")}" placeholder="Aciklama" />
+        </div>
+      </td>
+      <td>
+        <div class="cell-stack">
+          <select class="inline-input multi" data-role="step-assignees" multiple size="3">
+            ${renderUserOptions(true, step.assigneeIds)}
+          </select>
+          <span class="muted">${escapeHtml(formatAssigneeNames(step.assigneeIds, step.assignee))}</span>
+        </div>
+      </td>
+      <td>
+        <select class="inline-input" data-role="step-status">
+          ${renderStatusOptions(step.status)}
+        </select>
+      </td>
+      <td class="boolean-cell">
+        <label class="checkbox-inline">
+          <input data-role="step-optional" type="checkbox" ${step.isOptional ? "checked" : ""} />
+          Evet
+        </label>
+      </td>
+      <td>
+        <div class="cell-stack">
+          <input class="inline-input" data-role="step-note" value="${escapeAttribute(step.completionNote || "")}" placeholder="Not" />
+          <span class="muted">${escapeHtml(step.approvedBy ? `Onay: ${step.approvedBy}` : step.completedAt ? "Tamamlandi" : "-")}</span>
+        </div>
+      </td>
+      <td><button class="secondary link-button" data-action="save-step" data-step-id="${step.id}">Kaydet</button></td>
+      <td><button class="secondary link-button" data-action="delete-step" data-step-id="${step.id}">Sil</button></td>
+    </tr>
+  `;
+}
+
+function renderTemplateOptions() {
+  if (state.operations.templates.length === 0) {
+    return `<option value="">Template bulunamadi</option>`;
+  }
+
+  return state.operations.templates.map((template) => `
+    <option value="${escapeAttribute(template.id)}">${escapeHtml(template.name)}</option>
+  `).join("");
+}
+
+function renderUserOptions(includeInactive = false, selectedIds = []) {
+  const selectedIdSet = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+  return state.operations.users
+    .filter((user) => includeInactive || user.isActive)
+    .map((user) => `
+      <option value="${escapeAttribute(user.id)}" ${selectedIdSet.has(user.id) ? "selected" : ""}>
+        ${escapeHtml(user.fullName)}${user.departmentName ? ` - ${escapeHtml(user.departmentName)}` : ""}
+      </option>
+    `)
+    .join("");
+}
+
+function renderStatusOptions(selectedStatus) {
+  return ["pending", "ready", "in_progress", "completed", "skipped"]
+    .map((status) => `<option value="${status}" ${status === selectedStatus ? "selected" : ""}>${status}</option>`)
+    .join("");
+}
+
+function formatAssigneeNames(assigneeIds, fallbackAssignee) {
+  const names = assigneeIds
+    .map((id) => state.operations.users.find((user) => user.id === id))
+    .filter(Boolean)
+    .map((user) => user.fullName);
+
+  if (names.length > 0) {
+    return names.join(", ");
+  }
+
+  return fallbackAssignee || "Atama yok";
+}
+
+function summarizeAuditPayload(payload) {
+  if (!payload || typeof payload !== "object") {
+    return "Ek veri yok.";
+  }
+
+  const summary = [];
+  if (payload.name) {
+    summary.push(`Adim: ${payload.name}`);
+  }
+  if (payload.status) {
+    summary.push(`Durum: ${payload.status}`);
+  }
+  if (payload.note) {
+    summary.push(`Not: ${payload.note}`);
+  }
+  if (payload.completedBy) {
+    summary.push(`Tamamlayan: ${payload.completedBy}`);
+  }
+  if (payload.handoverTo) {
+    summary.push(`Devir: ${payload.handoverTo}`);
+  }
+  if (summary.length === 0) {
+    return JSON.stringify(payload).slice(0, 180);
+  }
+  return summary.join(" | ");
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(value).toLocaleString("tr-TR");
+}
+
+function formatErpStepStatus(status) {
+  if (status === "done") {
+    return "Tamamlandı";
+  }
+
+  if (status === "ready") {
+    return "Hazır";
+  }
+
+  if (status === "attention") {
+    return "Aksiyon Gerekli";
+  }
+
+  return status || "-";
+}
+
+function formatTaskStatus(status) {
+  if (status === "ready") {
+    return "Hazır";
+  }
+
+  if (status === "in_progress") {
+    return "İşlemde";
+  }
+
+  if (status === "completed") {
+    return "Tamamlandı";
+  }
+
+  if (status === "pending") {
+    return "Bekliyor";
+  }
+
+  if (status === "skipped") {
+    return "Atlandı";
+  }
+
+  return status || "-";
+}
+
+async function loadFileTypeRules() {
+  state.fileTypeRules = await requestJson("/api/config/file-types");
+  renderFileTypeRules();
+  return state.fileTypeRules;
+}
+
+async function loadKeywordRules() {
+  state.keywordRules = await requestJson("/api/config/keyword-rules");
+  renderKeywordRules();
+  return state.keywordRules;
+}
+
+async function loadFileNameRules() {
+  state.fileNameRules = await requestJson("/api/config/file-name-rules");
+  renderFileNameRules();
+  return state.fileNameRules;
+}
+
+async function loadOverrides() {
+  state.overrides = await requestJson("/api/config/part-overrides");
+  renderOverrides();
+  return state.overrides;
+}
+
+async function loadOperationsData() {
+  setOperationsStatus("Operasyon verileri yukleniyor...");
+
+  const [projects, userData, templates, openJobs] = await Promise.all([
+    requestJson("/api/operations/projects"),
+    requestJson("/api/operations/users"),
+    requestJson("/api/operations/workflow-templates"),
+    requestJson("/api/operations/open-jobs"),
+  ]);
+
+  state.operations.projects = projects;
+  state.operations.departments = userData.departments;
+  state.operations.users = userData.users;
+  state.operations.templates = templates;
+  state.operations.openJobs = openJobs;
+
+  const stillExists = state.operations.projects.some((project) => project.id === state.operations.selectedProjectId);
+  if (!stillExists) {
+    state.operations.selectedProjectId = state.operations.projects[0]?.id || null;
+  }
+
+  renderOperationsSummary();
+  renderProjectList();
+  renderUserManagement();
+  renderOpenJobs();
+  renderUserWorkspace();
+
+  if (state.operations.selectedProjectId) {
+    await loadSelectedProject(state.operations.selectedProjectId, { silent: true });
+  } else {
+    state.operations.selectedProject = null;
+    state.operations.auditEvents = [];
+    renderSelectedProject();
+    renderAuditEvents();
+  }
+
+  setOperationsStatus("Operasyon merkezi guncel.");
+}
+
+async function loadUserWorkspaceData(options = {}) {
+  if (state.operations.projects.length === 0 || state.operations.users.length === 0) {
+    await prepareUserWorkspacePage();
+  }
+
+  const selectedUserId = userWorkspaceUserSelect.value || state.operations.selectedUserId || "";
+  state.operations.selectedUserId = selectedUserId;
+  renderUserWorkspace();
+
+  if (!selectedUserId) {
+    setUserWorkspaceStatus("Önce kullanıcı seç.");
+    return;
+  }
+
+  if (!options.silent) {
+    setUserWorkspaceStatus("Kullanıcı işleri yükleniyor...");
+  }
+
+  const dashboards = await Promise.all(
+    state.operations.projects.map((project) => requestJson(`/api/operations/projects/${encodeURIComponent(project.id)}`)),
+  );
+
+  state.operations.userWorkItems = collectUserWorkItems(selectedUserId, dashboards);
+  renderUserWorkspace();
+
+  const selectedUser = state.operations.users.find((user) => user.id === selectedUserId);
+  const userLabel = selectedUser ? selectedUser.fullName : "Seçili kullanıcı";
+  setUserWorkspaceStatus(`${userLabel} için ${state.operations.userWorkItems.length} aktif iş hazırlandı.`);
+}
+
+async function prepareUserWorkspacePage() {
+  setUserWorkspaceStatus("Kullanıcı listesi yükleniyor...");
+
+  const [projects, userData] = await Promise.all([
+    requestJson("/api/operations/projects"),
+    requestJson("/api/operations/users"),
+  ]);
+
+  state.operations.projects = projects;
+  state.operations.departments = userData.departments;
+  state.operations.users = userData.users;
+  renderUserManagement();
+  renderUserWorkspace();
+  setUserWorkspaceStatus("Kullanıcı seçip İşleri Getir ile devam et.");
+}
+
+function collectUserWorkItems(userId, dashboards) {
+  const selectedUser = state.operations.users.find((user) => user.id === userId);
+  const selectedUserName = selectedUser ? normalizeText(selectedUser.fullName) : "";
+
+  return dashboards.flatMap((dashboard) => {
+    const project = dashboard.project;
+    return dashboard.workflows.flatMap((workflow) => {
+      const currentStep = workflow.steps.find((step) => (
+        (step.status === "ready" || step.status === "in_progress")
+        && (
+          step.assigneeIds.includes(userId)
+          || (selectedUserName && normalizeText(step.assignee || "").includes(selectedUserName))
+        )
+      ));
+
+      if (!currentStep) {
+        return [];
+      }
+
+      const nextStep = workflow.steps.find((step) => step.sequenceNo > currentStep.sequenceNo) || null;
+      return [{
+        project,
+        workflow,
+        currentStep,
+        nextStep,
+      }];
+    });
+  });
+}
+
+async function loadErpData() {
+  setErpStatus("ERP iş emirleri yükleniyor...");
+
+  const workOrders = await requestJson("/api/erp/work-orders");
+  state.erp.workOrders = workOrders;
+
+  const stillExists = state.erp.workOrders.some((workOrder) => workOrder.id === state.erp.selectedWorkOrderId);
+  if (!stillExists) {
+    state.erp.selectedWorkOrderId = state.erp.workOrders[0]?.id || null;
+  }
+
+  renderErpWorkOrderList();
+
+  if (!state.erp.selectedWorkOrderId) {
+    state.erp.selectedWorkOrder = null;
+    state.erp.dispatch = null;
+    renderErpSummary();
+    renderErpDetail();
+    setErpStatus("ERP iş emri bulunamadı.");
+    return;
+  }
+
+  await loadErpWorkOrder(state.erp.selectedWorkOrderId, { silent: true });
+  setErpStatus("ERP önizleme ekranı güncel.");
+}
+
+async function loadSelectedProject(projectId, options = {}) {
+  state.operations.selectedProjectId = projectId;
+  renderProjectList();
+
+  if (!options.silent) {
+    setOperationsStatus("Proje paneli yukleniyor...");
+  }
+
+  const [dashboard, auditEvents] = await Promise.all([
+    requestJson(`/api/operations/projects/${encodeURIComponent(projectId)}`),
+    requestJson(`/api/operations/projects/${encodeURIComponent(projectId)}/audit-events`),
+  ]);
+
+  state.operations.selectedProject = dashboard;
+  state.operations.auditEvents = auditEvents;
+  renderSelectedProject();
+  renderAuditEvents();
+  renderOpenJobs();
+
+  if (!options.silent) {
+    setOperationsStatus(`${dashboard.project.code} operasyon paneli acildi.`);
+  }
+}
+
+async function loadErpWorkOrder(workOrderId, options = {}) {
+  state.erp.selectedWorkOrderId = workOrderId;
+  renderErpWorkOrderList();
+
+  if (!options.silent) {
+    setErpStatus("ERP iş emri detayı yükleniyor...");
+  }
+
+  const detail = await requestJson(`/api/erp/work-orders/${encodeURIComponent(workOrderId)}`);
+  state.erp.selectedWorkOrder = detail;
+  state.erp.dispatch = detail.dispatch;
+
+  renderErpSummary();
+  renderErpWorkOrderList();
+  renderErpDetail();
+
+  if (!options.silent) {
+    setErpStatus(`${detail.workOrder.erpNo} için departman dağıtımı hazırlandı.`);
+  }
+}
+
+async function scanFolder() {
+  if (window.location.protocol === "file:") {
+    statusText.textContent = "Bu ekran doğrudan dosya olarak açılmış. Lütfen BASLAT.bat veya npm start ile sunucuyu başlat.";
+    return;
+  }
+
+  scanButton.disabled = true;
+  statusText.textContent = "Tarama başlatıldı...";
+
+  try {
+    const folder = folderInput.value.trim();
+    const response = await requestJson(`/api/scan?folder=${encodeURIComponent(folder)}`);
+    state.rows = response.rows;
+    state.partListBase = clonePartList(Array.isArray(response.partList) ? response.partList : []);
+    state.partList = clonePartList(state.partListBase);
+    state.scanInsights = response.insights || null;
+    renderStats(response.summary);
+    renderRows(filteredRows());
+    renderPartList(filteredPartList());
+    renderScanInsights(state.scanInsights);
+    statusText.textContent = `${response.scannedFolder} klasörü tarandı. ${response.rows.length} dosya bulundu, ${state.partList.length} parça kalemi oluşturuldu.`;
+  } catch (error) {
+    stats.innerHTML = "";
+    resultsBody.innerHTML = "";
+    partListStats.innerHTML = "";
+    partListCountText.textContent = "0 kalem";
+    partListBody.innerHTML = "";
+    renderScanInsights(null);
+    statusText.textContent = `Hata: ${error.message}. Sunucunun http://127.0.0.1:3000 üzerinde çalıştığından emin ol.`;
+  } finally {
+    scanButton.disabled = false;
+  }
+}
+
+function resetPartListEdits() {
+  state.partList = clonePartList(state.partListBase);
+  partListSearchInput.value = "";
+  renderPartList(filteredPartList());
+  statusText.textContent = "Parça listesi düzenlemeleri son tarama çıktısına geri alındı.";
+}
+
+async function saveFileTypeRules() {
+  state.fileTypeRules = await requestJson("/api/config/file-types", {
+    method: "PUT",
+    body: JSON.stringify(state.fileTypeRules),
+  });
+
+  renderFileTypeRules();
+  await scanFolder();
+  statusText.textContent = "Dosya tipi kurallari kaydedildi ve tarama yenilendi.";
+}
+
+async function saveKeywordRules() {
+  state.keywordRules = await requestJson("/api/config/keyword-rules", {
+    method: "PUT",
+    body: JSON.stringify(state.keywordRules),
+  });
+
+  renderKeywordRules();
+  statusText.textContent = "Keyword kurallari kaydedildi.";
+  await scanFolder();
+}
+
+async function saveFileNameRules() {
+  state.fileNameRules = await requestJson("/api/config/file-name-rules", {
+    method: "PUT",
+    body: JSON.stringify(state.fileNameRules),
+  });
+
+  renderFileNameRules();
+  statusText.textContent = "Dosya adı kuralları kaydedildi.";
+  await scanFolder();
+}
+
+async function saveOverrides() {
+  const draftConsumed = maybePersistDraftOverride();
+  if (draftConsumed === null) {
+    return;
+  }
+
+  state.overrides = await requestJson("/api/config/part-overrides", {
+    method: "PUT",
+    body: JSON.stringify(state.overrides),
+  });
+
+  renderOverrides();
+  clearOverrideForm();
+  await scanFolder();
+  statusText.textContent = draftConsumed
+    ? "Parca override kurallari kaydedildi. Formdaki taslak da uygulandi ve tarama yenilendi."
+    : "Parca override kurallari kaydedildi ve tarama yenilendi.";
+}
+
+function appendNewFileTypeRule() {
+  state.fileTypeRules.push({
+    extension: ".NEW",
+    displayName: "Yeni Tip",
+    defaultProcess: "Belirsiz",
+    defaultServiceType: "Belirsiz",
+    isActive: true,
+  });
+
+  renderFileTypeRules();
+}
+
+function clearOverrideForm() {
+  state.editingOverrideId = null;
+  overrideMatchMode.value = "partCode";
+  overridePartCode.value = "";
+  overrideFileName.value = "";
+  overrideProcess.value = "";
+  overrideServiceType.value = "";
+  overrideNote.value = "";
+}
+
+function prefillOverrideForm(payload) {
+  switchPage("rule-overrides");
+  state.editingOverrideId = payload.id || null;
+  overrideMatchMode.value = payload.partCode ? "partCode" : "fileName";
+  overridePartCode.value = payload.partCode || "";
+  overrideFileName.value = payload.fileName || "";
+  overrideProcess.value = payload.process || "";
+  overrideServiceType.value = payload.serviceType || "";
+  overrideNote.value = payload.note || "";
+  overridePartCode.focus();
+}
+
+function createOverrideFromForm() {
+  const matchMode = overrideMatchMode.value;
+  return {
+    id: state.editingOverrideId,
+    matchMode,
+    partCode: overridePartCode.value.trim(),
+    fileName: overrideFileName.value.trim(),
+    process: overrideProcess.value.trim(),
+    serviceType: overrideServiceType.value.trim(),
+    note: overrideNote.value.trim(),
+    isActive: true,
+  };
+}
+
+function upsertOverrideFromForm() {
+  const nextOverride = createOverrideFromForm();
+
+  if (!nextOverride.process || !nextOverride.serviceType) {
+    statusText.textContent = "Override kaydi icin surec ve hizmet alanlari gerekli.";
+    return false;
+  }
+
+  if (nextOverride.matchMode === "partCode" && !nextOverride.partCode) {
+    statusText.textContent = "Parca kodu eslesmesi icin parca kodu gir.";
+    return false;
+  }
+
+  if (nextOverride.matchMode === "fileName" && !nextOverride.fileName) {
+    statusText.textContent = "Dosya adi eslesmesi icin dosya adi gir.";
+    return false;
+  }
+
+  const existingIndex = state.overrides.findIndex((item) => item.id && item.id === state.editingOverrideId);
+  if (existingIndex >= 0) {
+    state.overrides[existingIndex] = { ...state.overrides[existingIndex], ...nextOverride };
+  } else {
+    state.overrides.unshift(nextOverride);
+  }
+
+  renderOverrides();
+  clearOverrideForm();
+  statusText.textContent = "Override kaydi listeye eklendi. Kalici olmasi icin Override Kaydet butonuna bas.";
+  return true;
+}
+
+function hasDraftOverride() {
+  return Boolean(
+    overridePartCode.value.trim()
+    || overrideFileName.value.trim()
+    || overrideProcess.value.trim()
+    || overrideServiceType.value.trim()
+    || overrideNote.value.trim(),
+  );
+}
+
+function maybePersistDraftOverride() {
+  if (!hasDraftOverride()) {
+    return false;
+  }
+
+  return upsertOverrideFromForm() ? true : null;
+}
+
+function handleTableInput(event) {
+  const { entity, index, field } = event.target.dataset;
+  if (entity !== "fileTypeRule" && entity !== "keywordRule" && entity !== "fileNameRule") {
+    return;
+  }
+
+  const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+  const collection = entity === "fileTypeRule"
+    ? state.fileTypeRules
+    : entity === "keywordRule"
+      ? state.keywordRules
+      : state.fileNameRules;
+  collection[Number(index)][field] = value;
+}
+
+function handleOverrideTableInput(event) {
+  const { entity, index, field } = event.target.dataset;
+  if (entity !== "override") {
+    return;
+  }
+
+  const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+  state.overrides[Number(index)][field] = value;
+}
+
+function handlePartListInput(event) {
+  const { entity, index, field } = event.target.dataset;
+  if (entity !== "partList") {
+    return;
+  }
+
+  const rawValue = event.target.value;
+  const value = field === "quantity" || field === "fileCount"
+    ? Number(rawValue || 0)
+    : rawValue;
+
+  state.partList[Number(index)][field] = value;
+  renderPartList(filteredPartList());
+}
+
+function handleBodyClick(event) {
+  const actionTarget = event.target.closest("[data-action]");
+  if (!actionTarget) {
+    return;
+  }
+
+  const { action } = actionTarget.dataset;
+
+  if (action === "delete-override") {
+    state.overrides.splice(Number(actionTarget.dataset.index), 1);
+    renderOverrides();
+    return;
+  }
+
+  if (action === "edit-override") {
+    const selectedOverride = state.overrides[Number(actionTarget.dataset.index)];
+    prefillOverrideForm(selectedOverride);
+    return;
+  }
+
+  if (action === "prefill-override") {
+    prefillOverrideForm({
+      partCode: actionTarget.dataset.partCode,
+      fileName: actionTarget.dataset.fileName,
+      process: actionTarget.dataset.process,
+      serviceType: actionTarget.dataset.serviceType,
+    });
+    return;
+  }
+
+  if (action === "delete-file-name-rule") {
+    state.fileNameRules.splice(Number(actionTarget.dataset.index), 1);
+    renderFileNameRules();
+  }
+}
+
+async function handleOperationsClick(event) {
+  const actionTarget = event.target.closest("[data-action]");
+  if (!actionTarget) {
+    return;
+  }
+
+  const { action } = actionTarget.dataset;
+
+  try {
+    if (action === "select-project") {
+      await loadSelectedProject(actionTarget.dataset.projectId);
+      return;
+    }
+
+    if (action === "deactivate-user") {
+      await requestJson(`/api/operations/users/${encodeURIComponent(actionTarget.dataset.userId)}`, {
+        method: "DELETE",
+      });
+      await loadOperationsData();
+      setOperationsStatus("Kullanici pasife alindi.");
+      return;
+    }
+
+    if (action === "delete-project") {
+      await deleteProject(actionTarget.dataset.projectId);
+      return;
+    }
+
+    if (action === "delete-workflow-instance") {
+      await deleteWorkflowInstance(actionTarget.dataset.instanceId);
+      return;
+    }
+
+    if (action === "assign-project-workflows") {
+      await assignProjectWorkflows(actionTarget.dataset.projectId);
+      return;
+    }
+
+    if (action === "save-step") {
+      await saveStepFromRow(actionTarget.closest("tr"));
+      return;
+    }
+
+    if (action === "save-step-card") {
+      await saveStepFromCard(actionTarget.closest(".quick-step-card"));
+      return;
+    }
+
+    if (action === "delete-step") {
+      await requestJson(`/api/operations/workflow-instance-steps/${encodeURIComponent(actionTarget.dataset.stepId)}`, {
+        method: "DELETE",
+      });
+      await refreshSelectedProject();
+      setOperationsStatus("Adim silindi ve Acik Isler alanina aktarildi.");
+      return;
+    }
+
+    if (action === "advance-instance") {
+      const container = actionTarget.closest(".advance-grid");
+      await advanceInstance(container, actionTarget.dataset.instanceId);
+      return;
+    }
+
+    if (action === "download-operations-report") {
+      await downloadOperationsReport(actionTarget.dataset.format);
+    }
+  } catch (error) {
+    setOperationsStatus(`Islem hatasi: ${error.message}`);
+  }
+}
+
+async function handleUserWorkspaceClick(event) {
+  const actionTarget = event.target.closest("[data-action]");
+  if (!actionTarget) {
+    return;
+  }
+
+  if (actionTarget.dataset.action !== "advance-user-task") {
+    return;
+  }
+
+  try {
+    const card = actionTarget.closest(".user-task-card");
+    await advanceUserTask(card, actionTarget.dataset.instanceId, actionTarget.dataset.nextRequired === "true");
+  } catch (error) {
+    setUserWorkspaceStatus(`İşlem hatası: ${error.message}`);
+  }
+}
+
+async function handleErpClick(event) {
+  const actionTarget = event.target.closest("[data-action]");
+  if (!actionTarget) {
+    return;
+  }
+
+  try {
+    if (actionTarget.dataset.action === "select-erp-work-order") {
+      await loadErpWorkOrder(actionTarget.dataset.workOrderId);
+      return;
+    }
+
+    if (actionTarget.dataset.action === "start-erp-operation") {
+      await startErpOperation(actionTarget.dataset.workOrderId);
+      return;
+    }
+  } catch (error) {
+    setErpStatus(`ERP işlemi tamamlanamadı: ${error.message}`);
+  }
+}
+
+async function startErpOperation(workOrderId) {
+  setErpStatus("ERP iş emri operasyona aktarılıyor...");
+
+  const result = await requestJson(`/api/erp/work-orders/${encodeURIComponent(workOrderId)}/start`, {
+    method: "POST",
+  });
+
+  await loadErpData();
+  await loadOperationsData();
+  await loadSelectedProject(result.project.id);
+  switchPage("projects");
+  setErpStatus(`${result.workOrder.erpNo} operasyona aktarıldı.`);
+  setOperationsStatus(`${result.project.code} projesi oluşturuldu ve ${result.workflows.length} workflow hazırlandı.`);
+}
+
+async function saveStepFromRow(row) {
+  const stepId = row.dataset.stepId;
+  const payload = {
+    name: row.querySelector('[data-role="step-name"]').value.trim(),
+    description: row.querySelector('[data-role="step-description"]').value.trim(),
+    assigneeIds: getSelectedValues(row.querySelector('[data-role="step-assignees"]')),
+    status: row.querySelector('[data-role="step-status"]').value,
+    isOptional: row.querySelector('[data-role="step-optional"]').checked,
+    note: row.querySelector('[data-role="step-note"]').value.trim(),
+  };
+
+  await requestJson(`/api/operations/workflow-instance-steps/${encodeURIComponent(stepId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+
+  await refreshSelectedProject();
+  setOperationsStatus("Adim bilgisi guncellendi.");
+}
+
+async function saveStepFromCard(card) {
+  const stepId = card.dataset.stepId;
+  const payload = {
+    name: card.querySelector('[data-role="step-name"]').value.trim(),
+    description: card.querySelector('[data-role="step-description"]').value.trim(),
+    assigneeIds: getSelectedValues(card.querySelector('[data-role="step-assignees"]')),
+    status: card.querySelector('[data-role="step-status"]').value,
+    isOptional: card.querySelector('[data-role="step-optional"]').checked,
+    note: card.querySelector('[data-role="step-note"]').value.trim(),
+  };
+
+  await requestJson(`/api/operations/workflow-instance-steps/${encodeURIComponent(stepId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+
+  await refreshSelectedProject();
+  setOperationsStatus("Adim kart gorunumunden guncellendi.");
+}
+
+async function deleteProject(projectId) {
+  const project = state.operations.projects.find((item) => item.id === projectId);
+  const projectLabel = project ? `${project.code} - ${project.name}` : "seçili proje";
+  if (!window.confirm(`${projectLabel} projesini silmek istediğine emin misin? Bu işlem geri alınamaz.`)) {
+    return;
+  }
+
+  await requestJson(`/api/operations/projects/${encodeURIComponent(projectId)}`, {
+    method: "DELETE",
+  });
+
+  await loadOperationsData();
+  setOperationsStatus("Proje ve bagli workflow verileri silindi.");
+}
+
+async function deleteWorkflowInstance(instanceId) {
+  if (!window.confirm("Bu iş akışını silmek istediğine emin misin?")) {
+    return;
+  }
+
+  await requestJson(`/api/operations/workflow-instances/${encodeURIComponent(instanceId)}`, {
+    method: "DELETE",
+  });
+
+  await refreshSelectedProject();
+  setOperationsStatus("Is akisi silindi.");
+}
+
+async function assignProjectWorkflows(projectId) {
+  const result = await requestJson(`/api/operations/projects/${encodeURIComponent(projectId)}/assign-workflows`, {
+    method: "POST",
+  });
+
+  await refreshSelectedProject();
+  if (state.operations.selectedUserId) {
+    await loadUserWorkspaceData({ silent: true });
+  }
+
+  const affectedWorkflowCount = Array.isArray(result.updatedInstances) ? result.updatedInstances.length : 0;
+  const affectedStepCount = Number(result.updatedStepCount || 0);
+
+  setOperationsStatus(
+    affectedStepCount > 0
+      ? `${result.project.code} projesinde ${affectedWorkflowCount} akış içindeki ${affectedStepCount} adım kullanıcılara aktarıldı.`
+      : `${result.project.code} projesinde aktarılacak yeni kullanıcı ataması bulunamadı.`,
+  );
+}
+
+async function advanceInstance(container, instanceId) {
+  const completedById = container.querySelector('[data-role="completed-by"]').value;
+  const nextAssigneeIds = getSelectedValues(container.querySelector('[data-role="next-assignees"]'));
+  const note = container.querySelector('[data-role="advance-note"]').value.trim();
+  const completedBy = getUserNameById(completedById);
+  const handoverTo = nextAssigneeIds.map(getUserNameById).filter(Boolean).join(", ");
+
+  await requestJson(`/api/operations/workflow-instances/${encodeURIComponent(instanceId)}/advance`, {
+    method: "POST",
+    body: JSON.stringify({
+      completedBy,
+      note,
+      handoverTo,
+      nextAssigneeIds,
+    }),
+  });
+
+  await refreshSelectedProject();
+  setOperationsStatus("Aktif adim tamamlandi ve bir sonraki adim devreye alindi.");
+}
+
+async function advanceUserTask(card, instanceId, nextRequired) {
+  const selectedUserId = state.operations.selectedUserId || userWorkspaceUserSelect.value;
+  const selectedUser = state.operations.users.find((user) => user.id === selectedUserId);
+  if (!selectedUser) {
+    setUserWorkspaceStatus("Önce kullanıcı seç.");
+    return;
+  }
+
+  const notePreset = card.querySelector('[data-role="task-note-preset"]').value.trim();
+  const nextAssigneeIds = getSelectedValues(card.querySelector('[data-role="task-next-assignees"]'));
+
+  if (nextRequired && nextAssigneeIds.length === 0) {
+    setUserWorkspaceStatus("Sonraki adım için en az bir sorumlu seç.");
+    return;
+  }
+
+  const handoverTo = nextAssigneeIds.map(getUserNameById).filter(Boolean).join(", ");
+  await requestJson(`/api/operations/workflow-instances/${encodeURIComponent(instanceId)}/advance`, {
+    method: "POST",
+    body: JSON.stringify({
+      completedBy: selectedUser.fullName,
+      note: notePreset,
+      handoverTo,
+      nextAssigneeIds,
+    }),
+  });
+
+  await loadOperationsData();
+  await loadUserWorkspaceData({ silent: true });
+  setUserWorkspaceStatus(nextRequired
+    ? "İş onaylandı ve bir sonraki kullanıcıya devredildi."
+    : "İş tamamlandı.");
+  setOperationsStatus("Kullanıcı ekranından yapılan onay operasyon verisine işlendi.");
+}
+
+async function downloadOperationsReport(format) {
+  const projectId = state.operations.selectedProjectId;
+  if (!projectId) {
+    setOperationsStatus("Rapor icin once bir proje sec.");
+    return;
+  }
+
+  setOperationsStatus(`${format.toUpperCase()} raporu hazirlaniyor...`);
+
+  const response = await apiClient.apiFetch(`/api/operations/projects/${encodeURIComponent(projectId)}/report.${format}`);
+  if (!response.ok) {
+    throw new Error(await readErrorResponse(response));
+  }
+
+  const contentDisposition = response.headers.get("Content-Disposition") || "";
+  const match = contentDisposition.match(/filename=\"([^\"]+)\"/);
+  const fileName = match ? match[1] : `operations-report.${format}`;
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  setOperationsStatus(`${format.toUpperCase()} raporu indirildi.`);
+}
+
+async function refreshSelectedProject() {
+  await loadOperationsData();
+  if (state.operations.selectedProjectId) {
+    await loadSelectedProject(state.operations.selectedProjectId, { silent: true });
+  }
+}
+
+function appendKeywordRule() {
+  state.keywordRules.push({
+    id: `keyword-rule-${state.keywordRules.length + 1}`,
+    keyword: "YENI",
+    process: "Belirsiz",
+    serviceType: "Belirsiz",
+    matchTarget: "fileName",
+    isActive: true,
+  });
+
+  renderKeywordRules();
+}
+
+function appendFileNameRule() {
+  state.fileNameRules.unshift({
+    id: `file-name-rule-${state.fileNameRules.length + 1}`,
+    name: "Yeni dosya adı kuralı",
+    patternMode: "prefix",
+    patternValue: "",
+    replacementValue: "",
+    process: "",
+    serviceType: "",
+    priority: 0,
+    applyTo: "fileName",
+    isActive: true,
+  });
+
+  renderFileNameRules();
+}
+
+function exportCurrentRowsToCsv() {
+  if (state.rows.length === 0) {
+    statusText.textContent = "Aktarilacak veri yok. Once tarama yap.";
+    return;
+  }
+
+  const rows = filteredRows();
+  const headers = [
+    "Parca Kodu",
+    "Dosya Adi",
+    "Dosya Tipi",
+    "Ana Grup",
+    "Surec",
+    "Hizmet",
+    "Guven",
+    "Eslesme",
+    "Klasor",
+    "Goreli Yol",
+  ];
+
+  const csvLines = [
+    headers.join(";"),
+    ...rows.map((row) => [
+      row.partCode,
+      row.fileName,
+      row.fileType,
+      row.mainGroup,
+      row.suggestedProcess,
+      row.serviceType,
+      row.confidence,
+      row.matchedBy,
+      row.folder,
+      row.relativePath,
+    ].map(escapeCsvCell).join(";")),
+  ];
+
+  const blob = new Blob([`\uFEFF${csvLines.join("\n")}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "solid-workflow-raporu.csv";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  statusText.textContent = `${rows.length} satirlik CSV raporu indirildi.`;
+}
+
+async function exportCurrentRowsToExcel() {
+  const folder = folderInput.value.trim();
+  if (!folder) {
+    statusText.textContent = "Excel aktarimi icin once klasor yolu gerekli.";
+    return;
+  }
+
+  statusText.textContent = "Excel raporu hazirlaniyor...";
+
+  try {
+    const response = await apiClient.apiFetch(`/api/reports/workflow.xlsx?folder=${encodeURIComponent(folder)}`);
+    if (!response.ok) {
+      throw new Error(await readErrorResponse(response));
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "solid-workflow-report.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    statusText.textContent = "Excel raporu indirildi.";
+  } catch (error) {
+    statusText.textContent = `Excel export hatasi: ${error.message}`;
+  }
+}
+
+async function exportPartListToExcel() {
+  const folder = folderInput.value.trim();
+  if (!folder) {
+    statusText.textContent = "Parça listesi Excel aktarımı için önce klasör yolu gerekli.";
+    return;
+  }
+
+  if (!state.rows.length) {
+    statusText.textContent = "Parça listesi Excel aktarımı için önce tarama yap.";
+    return;
+  }
+
+  statusText.textContent = "Parça listesi Excel raporu hazırlanıyor...";
+
+  try {
+    const response = await apiClient.apiFetch("/api/reports/workflow.xlsx", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        scannedFolder: folder,
+        summary: buildSummaryFromRows(state.rows),
+        rows: state.rows,
+        partList: state.partList,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readErrorResponse(response));
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "solid-workflow-ve-parca-listesi.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    statusText.textContent = "Parça listesi dahil Excel raporu indirildi.";
+  } catch (error) {
+    statusText.textContent = `Parça listesi Excel export hatası: ${error.message}`;
+  }
+}
+
+async function requestJson(url, options = {}) {
+  const response = await apiClient.apiFetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  const rawText = await response.text();
+  const data = tryParseJson(rawText);
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(data, rawText));
+  }
+
+  return data ?? [];
+}
+
+async function readErrorResponse(response) {
+  const rawText = await response.text();
+  const data = tryParseJson(rawText);
+  return extractErrorMessage(data, rawText);
+}
+
+function tryParseJson(rawText) {
+  if (!rawText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    return null;
+  }
+}
+
+function extractErrorMessage(data, rawText) {
+  if (data && typeof data === "object") {
+    return data.detail || data.error || JSON.stringify(data);
+  }
+
+  if (rawText && rawText.trim()) {
+    return rawText.trim();
+  }
+
+  return "Bilinmeyen hata";
+}
+
+function buildSummaryFromRows(rows) {
+  const summary = {
+    totalFiles: rows.length,
+    assignedFiles: rows.filter((row) => row.confidence !== "Belirsiz").length,
+    uncertainFiles: rows.filter((row) => row.confidence === "Belirsiz").length,
+    byProcess: {},
+    byFileType: {},
+    byServiceType: {},
+  };
+
+  for (const row of rows) {
+    summary.byProcess[row.suggestedProcess] = (summary.byProcess[row.suggestedProcess] || 0) + 1;
+    summary.byFileType[row.fileType] = (summary.byFileType[row.fileType] || 0) + 1;
+    summary.byServiceType[row.serviceType] = (summary.byServiceType[row.serviceType] || 0) + 1;
+  }
+
+  return summary;
+}
+
+function clonePartList(partList) {
+  return JSON.parse(JSON.stringify(Array.isArray(partList) ? partList : []));
+}
+
+function getSelectedValues(select) {
+  return Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+}
+
+function getUserNameById(userId) {
+  return state.operations.users.find((user) => user.id === userId)?.fullName || "";
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .toLocaleLowerCase("tr")
+    .replaceAll("ı", "i");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value);
+}
+
+function escapeCsvCell(value) {
+  const text = String(value || "");
+  if (/[;"\n]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  return text;
+}
+
+async function handleProjectCreateSubmit(event) {
+  event.preventDefault();
+
+  try {
+    const payload = {
+      code: projectCodeInput.value.trim(),
+      name: projectNameInput.value.trim(),
+      description: projectDescriptionInput.value.trim(),
+      autoGenerateFromFolder: projectFolderInput.value.trim() || undefined,
+    };
+
+    const project = await requestJson("/api/operations/projects", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    projectCreateForm.reset();
+    projectFolderInput.value = folderInput.value.trim();
+    await loadOperationsData();
+    await loadSelectedProject(project.id);
+    setOperationsStatus("Yeni proje olusturuldu.");
+  } catch (error) {
+    setOperationsStatus(`Proje olusturma hatasi: ${error.message}`);
+  }
+}
+
+async function handleUserCreateSubmit(event) {
+  event.preventDefault();
+
+  try {
+    await requestJson("/api/operations/users", {
+      method: "POST",
+      body: JSON.stringify({
+        departmentId: userDepartmentSelect.value,
+        fullName: userFullNameInput.value.trim(),
+        email: userEmailInput.value.trim(),
+        isActive: true,
+      }),
+    });
+
+    userCreateForm.reset();
+    await loadOperationsData();
+    setOperationsStatus("Yeni kullanici eklendi.");
+  } catch (error) {
+    setOperationsStatus(`Kullanici ekleme hatasi: ${error.message}`);
+  }
+}
+
+async function handleSelectedProjectPanelSubmit(event) {
+  const form = event.target.closest("form");
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+
+  try {
+    if (form.id === "workflowCreateForm") {
+      await requestJson(`/api/operations/projects/${encodeURIComponent(state.operations.selectedProjectId)}/workflow-instances`, {
+        method: "POST",
+        body: JSON.stringify({
+          workflows: [
+            {
+              templateId: document.getElementById("workflowTemplateSelect").value,
+              instanceName: document.getElementById("workflowInstanceNameInput").value.trim(),
+              itemLabel: document.getElementById("workflowItemLabelInput").value.trim(),
+              itemCount: Number(document.getElementById("workflowItemCountInput").value || 1),
+              stepAssignments: [],
+            },
+          ],
+        }),
+      });
+
+      await refreshSelectedProject();
+      setOperationsStatus("Template bazli workflow eklendi.");
+      return;
+    }
+
+    if (form.id === "projectBootstrapForm") {
+      await requestJson(`/api/operations/projects/${encodeURIComponent(state.operations.selectedProjectId)}/bootstrap-workflows`, {
+        method: "POST",
+        body: JSON.stringify({
+          folderPath: document.getElementById("bootstrapFolderPathInput").value.trim(),
+        }),
+      });
+
+      await refreshSelectedProject();
+      setOperationsStatus("Klasor analizine gore otomatik workflow uretildi.");
+      return;
+    }
+
+    if (form.classList.contains("add-step-form")) {
+      const instanceId = form.dataset.instanceId;
+      await requestJson(`/api/operations/workflow-instances/${encodeURIComponent(instanceId)}/steps`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.querySelector('[data-role="new-step-name"]').value.trim(),
+          description: form.querySelector('[data-role="new-step-description"]').value.trim(),
+          sequenceNo: Number(form.querySelector('[data-role="new-step-sequence"]').value || 1),
+          status: form.querySelector('[data-role="new-step-status"]').value,
+          assigneeIds: getSelectedValues(form.querySelector('[data-role="new-step-assignees"]')),
+          isOptional: form.querySelector('[data-role="new-step-optional"]').checked,
+        }),
+      });
+
+      await refreshSelectedProject();
+      setOperationsStatus("Yeni adim eklendi.");
+    }
+  } catch (error) {
+    setOperationsStatus(`Islem hatasi: ${error.message}`);
+  }
+}
+
+
+
+

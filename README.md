@@ -2,15 +2,25 @@
 
 Klasor ve dosya isimlerinden is akisi ureten, dosya tipi kurallari ve parca bazli override mantigi ile yonetilebilen Node.js uygulamasi.
 
-## Mimari
+## Proje Yapisi
 
-Proje clean architecture mantigi ile katmanlara ayrildi:
+Proje artik backend ve frontend olarak ayrilmistir:
 
-- `src/domain`: saf is kurallari
-- `src/application`: use-case katmani
-- `src/infrastructure`: dosya sistemi ve JSON repository uygulamalari
-- `src/presentation`: HTTP sunucu ve API katmani
-- `data`: yonetilebilir kural dosyalari
+- `apps/backend/src`: API, domain, application, infrastructure ve presentation katmanlari
+- `apps/frontend/public`: tarayici arayuzu
+- `data`: SQLite ve seed/config verileri
+
+Backend ile frontend ayni uygulama icinde ancak ayri sorumluluklarda tutulur:
+
+- frontend tarayicida sadece UI ve API cagrilarini yonetir
+- backend `http://127.0.0.1:3000` uzerinden hem `/api/*` endpointlerini hem de frontend statik dosyalarini sunar
+
+Backend ic mimarisi clean architecture mantigi ile katmanlara ayrilmistir:
+
+- `apps/backend/src/domain`: saf is kurallari
+- `apps/backend/src/application`: use-case katmani
+- `apps/backend/src/infrastructure`: dosya sistemi, veritabani ve repository uygulamalari
+- `apps/backend/src/presentation`: HTTP sunucu ve API katmani
 
 ## Veri Katmani
 
@@ -113,6 +123,40 @@ Ardindan:
 `http://127.0.0.1:3000`
 
 adresini acin.
+
+## Tek Komutla Calistirma
+
+Kok dizinden:
+
+```powershell
+npm start
+```
+
+Bu komut:
+
+- backend uygulamasini `apps/backend/src/server.js` uzerinden baslatir
+- frontend dosyalarini `apps/frontend/public` klasorunden yayinlar
+- boylece proje tek komutta butun olarak ayaga kalkar
+
+## Konfigurasyon
+
+Uygulama backend tarafinda `.env` dosyasi destekler. Ornek degiskenler icin:
+
+- `.env.example`
+
+Kullanilabilecek temel alanlar:
+
+- `APP_HOST`
+- `APP_PORT`
+- `DEFAULT_SCAN_DIR`
+- `DATA_DIR`
+- `FRONTEND_PUBLIC_DIR`
+- `FRONTEND_API_BASE_URL`
+
+Frontend API adresi artik tek yerden yonetilir:
+
+- backend `GET /app-config.js` endpointi ile runtime config yayinlar
+- frontend bu config'i yukleyip tum API isteklerinde ayni `apiBaseUrl` degerini kullanir
 
 ## Gelistirme Notlari
 

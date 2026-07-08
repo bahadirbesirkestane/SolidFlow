@@ -1,4 +1,5 @@
 .agents/
+.env
 
 server.log
 server.err.log

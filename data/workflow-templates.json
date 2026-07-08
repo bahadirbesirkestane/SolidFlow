@@ -94,5 +94,77 @@
         "isOptional": false
       }
     ]
+  },
+  {
+    "id": "template-production-flow",
+    "name": "Uretim Hazirlama ve Isleme",
+    "description": "Imalat, bukum, profil ve torna freze kalemleri icin planlama ve kalite kontrol akisi.",
+    "isActive": true,
+    "steps": [
+      {
+        "id": "production-step-1",
+        "sequenceNo": 1,
+        "name": "Uretim Planlama",
+        "description": "Kalemin uretim yolu netlestirilir ve is emirleri hazirlanir.",
+        "defaultAssignee": "Uretim Planlama",
+        "isOptional": false
+      },
+      {
+        "id": "production-step-2",
+        "sequenceNo": 2,
+        "name": "Operasyon Hazirlik",
+        "description": "Resim, kesim listesi ve operasyon bilgileri kontrol edilir.",
+        "defaultAssignee": "Kalite Kontrol",
+        "isOptional": false
+      },
+      {
+        "id": "production-step-3",
+        "sequenceNo": 3,
+        "name": "Uretim Isleme",
+        "description": "Parca ilgili imalat, bukum, profil veya torna freze surecine alinir.",
+        "defaultAssignee": "Imalat",
+        "isOptional": false
+      },
+      {
+        "id": "production-step-4",
+        "sequenceNo": 4,
+        "name": "Son Kontrol",
+        "description": "Uretilen kalem kalite acisindan kontrol edilir.",
+        "defaultAssignee": "Kalite Kontrol",
+        "isOptional": false
+      }
+    ]
+  },
+  {
+    "id": "template-assembly-flow",
+    "name": "Montaj ve Elektrik Hazirlik",
+    "description": "Montaj veya elektrik agirlikli kalemlerin hazirlik, uygulama ve son aktarim akisi.",
+    "isActive": true,
+    "steps": [
+      {
+        "id": "assembly-step-1",
+        "sequenceNo": 1,
+        "name": "Montaj Hazirlik",
+        "description": "Montaj veya elektrik icin gerekli parca ve plan kontrol edilir.",
+        "defaultAssignee": "Montaj",
+        "isOptional": false
+      },
+      {
+        "id": "assembly-step-2",
+        "sequenceNo": 2,
+        "name": "Uygulama",
+        "description": "Montaj veya elektrik operasyonu uygulanir.",
+        "defaultAssignee": "Elektrik",
+        "isOptional": false
+      },
+      {
+        "id": "assembly-step-3",
+        "sequenceNo": 3,
+        "name": "Fonksiyon Kontrol",
+        "description": "Operasyon sonrasi son kontrol ve teslim hazirligi yapilir.",
+        "defaultAssignee": "Kalite Kontrol",
+        "isOptional": false
+      }
+    ]
   }
 ]
