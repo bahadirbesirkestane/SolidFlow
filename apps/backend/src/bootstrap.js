@@ -12,6 +12,7 @@ const { SavePartOverridesUseCase } = require("./application/use-cases/save-part-
 const { ExportWorkflowReportUseCase } = require("./application/use-cases/export-workflow-report-use-case");
 const { ListWorkflowTemplatesUseCase } = require("./application/use-cases/list-workflow-templates-use-case");
 const { CreateProjectUseCase } = require("./application/use-cases/create-project-use-case");
+const { CreateBulkWorkOrdersUseCase } = require("./application/use-cases/create-bulk-work-orders-use-case");
 const { DeleteProjectUseCase } = require("./application/use-cases/delete-project-use-case");
 const { ListProjectsUseCase } = require("./application/use-cases/list-projects-use-case");
 const { GetProjectDashboardUseCase } = require("./application/use-cases/get-project-dashboard-use-case");
@@ -55,8 +56,10 @@ const { ListErpWorkOrdersUseCase } = require("./application/use-cases/list-erp-w
 const { GetErpWorkOrderDetailUseCase } = require("./application/use-cases/get-erp-work-order-detail-use-case");
 const { ErpDispatchPlanner } = require("./application/services/erp-dispatch-planner");
 const { StartErpWorkOrderUseCase } = require("./application/use-cases/start-erp-work-order-use-case");
+const { SelectFolderUseCase } = require("./application/use-cases/select-folder-use-case");
 const { createAppConfig } = require("./config/app-config");
 const { createHttpServer } = require("./presentation/http/server-factory");
+const { WindowsFolderPicker } = require("./infrastructure/services/windows-folder-picker");
 
 function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const sqliteClient = new SqliteClient(rootPath);
@@ -86,6 +89,7 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     ),
   });
   const projectScanner = new LocalProjectScanner();
+  const folderPickerService = new WindowsFolderPicker();
   const workflowEngine = new WorkflowEngine();
   const reportExporter = new WorkflowReportExporter(rootPath);
   const operationsReportExporter = new OperationsReportExporter(rootPath);
@@ -145,6 +149,7 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
       createWorkflowInstancesUseCase,
       auditLogRepository,
     }),
+    selectFolder: new SelectFolderUseCase({ folderPickerService }),
     exportWorkflowReport: new ExportWorkflowReportUseCase({
       scanProjectUseCase,
       reportExporter,
@@ -158,6 +163,10 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     }),
     listWorkflowTemplates: new ListWorkflowTemplatesUseCase({ workflowTemplateRepository }),
     createProject: new CreateProjectUseCase({ projectRepository, bootstrapProjectWorkflowsUseCase }),
+    createBulkWorkOrders: new CreateBulkWorkOrdersUseCase({
+      projectRepository,
+      createWorkflowInstancesUseCase,
+    }),
     deleteProject: new DeleteProjectUseCase({ projectRepository }),
     listProjects: new ListProjectsUseCase({ projectRepository, workflowInstanceRepository }),
     getProjectDashboard: new GetProjectDashboardUseCase({ projectRepository, workflowInstanceRepository }),
@@ -199,7 +208,10 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     application,
     publicDir,
     defaultScanDir,
-    frontendConfig: appConfig.frontend,
+    frontendConfig: {
+      ...appConfig.frontend,
+      defaultScanDir,
+    },
   });
 
   return {

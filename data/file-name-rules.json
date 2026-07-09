@@ -50,5 +50,44 @@
     "applyTo": "fileName",
     "note": "Örnek: LSR_3300_SAC.DXF -> dış hizmet lazer kesim akışına yönlenir.",
     "isActive": true
+  },
+  {
+    "id": "file-name-rule-prd-prefix",
+    "name": "PRD öneki üretim hazırlık akışına yönlendir",
+    "patternMode": "prefix",
+    "patternValue": "PRD_",
+    "replacementValue": "",
+    "process": "Imalat",
+    "serviceType": "Ic Uretim",
+    "priority": 95,
+    "applyTo": "fileName",
+    "note": "Örnek: PRD_5400_MIL.SLDPRT -> imalat hazırlık akışına alınır.",
+    "isActive": true
+  },
+  {
+    "id": "file-name-rule-mnt-prefix",
+    "name": "MNT öneki montaj iş emrine yönlendir",
+    "patternMode": "prefix",
+    "patternValue": "MNT_",
+    "replacementValue": "",
+    "process": "Montaj",
+    "serviceType": "Montaj Hazirligi",
+    "priority": 92,
+    "applyTo": "fileName",
+    "note": "Örnek: MNT_KABIN.SLDASM -> montaj akışına öncelikli alınır.",
+    "isActive": true
+  },
+  {
+    "id": "file-name-rule-purchase-suffix",
+    "name": "SATIN son eki tedarik akışına yönlendir",
+    "patternMode": "suffix",
+    "patternValue": "_SATIN",
+    "replacementValue": "",
+    "process": "Satin Alma",
+    "serviceType": "Malzeme Tedarigi",
+    "priority": 88,
+    "applyTo": "baseName",
+    "note": "Örnek: 7001_RULMAN_SATIN.SLDPRT -> satın alma işine yönlenir.",
+    "isActive": true
   }
 ]

@@ -11,9 +11,19 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
         sendText(
           response,
           200,
-          `window.APP_CONFIG = ${JSON.stringify({ apiBaseUrl: frontendConfig.apiBaseUrl || "" }, null, 2)};`,
+          `window.APP_CONFIG = ${JSON.stringify({
+            apiBaseUrl: frontendConfig.apiBaseUrl || "",
+            defaultScanDir: frontendConfig.defaultScanDir || "",
+          }, null, 2)};`,
           "application/javascript; charset=utf-8",
         );
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/system/select-folder") {
+        const payload = await readJsonBody(request);
+        const result = await application.selectFolder.execute(payload || {});
+        sendJson(response, 200, result);
         return;
       }
 
@@ -95,6 +105,13 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
       if (request.method === "POST" && url.pathname === "/api/operations/projects") {
         const payload = await readJsonBody(request);
         const result = await application.createProject.execute(payload);
+        sendJson(response, 201, result);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/operations/projects/bulk-work-orders") {
+        const payload = await readJsonBody(request);
+        const result = await application.createBulkWorkOrders.execute(payload);
         sendJson(response, 201, result);
         return;
       }
@@ -272,7 +289,11 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
         return;
       }
 
-      const filePath = url.pathname === "/"
+      const isFrontendRoute = request.method === "GET"
+        && !url.pathname.startsWith("/api/")
+        && path.extname(url.pathname) === "";
+
+      const filePath = url.pathname === "/" || isFrontendRoute
         ? path.join(publicDir, "index.html")
         : path.join(publicDir, url.pathname);
 

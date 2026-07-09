@@ -88,4 +88,5 @@ function pickTemplateId(row) {
 
 module.exports = {
   WorkflowAutoPlanner,
+  pickTemplateId,
 };

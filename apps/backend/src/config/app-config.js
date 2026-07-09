@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const { loadEnvFile } = require("./env-loader");
 
@@ -7,7 +8,8 @@ function createAppConfig({ rootPath }) {
   const host = String(process.env.APP_HOST || "127.0.0.1").trim();
   const port = Number(process.env.APP_PORT || 3000);
   const publicDir = resolvePath(rootPath, process.env.FRONTEND_PUBLIC_DIR, path.join(rootPath, "apps", "frontend", "public"));
-  const defaultScanDir = resolvePath(rootPath, process.env.DEFAULT_SCAN_DIR, path.join(rootPath, "IN26016_TARTIM KONVOYOR"));
+  const requestedDefaultScanDir = resolvePath(rootPath, process.env.DEFAULT_SCAN_DIR, path.join(rootPath, "IN26016_TARTIM KONVOYOR"));
+  const defaultScanDir = fs.existsSync(requestedDefaultScanDir) ? requestedDefaultScanDir : rootPath;
   const dataDir = resolvePath(rootPath, process.env.DATA_DIR, path.join(rootPath, "data"));
   const apiBaseUrl = normalizeApiBaseUrl(process.env.FRONTEND_API_BASE_URL || "");
 

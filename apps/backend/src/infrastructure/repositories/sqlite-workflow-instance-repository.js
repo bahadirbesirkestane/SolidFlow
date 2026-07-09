@@ -101,6 +101,50 @@ class SqliteWorkflowInstanceRepository {
     return instance ? this.mapInstance(instance) : null;
   }
 
+  async getStepById(stepId) {
+    const step = this.db.prepare(`
+      SELECT
+        wis.id, wis.instance_id, wis.template_step_id, wis.sequence_no, wis.name, wis.description,
+        wis.assignee, wis.handover_to, wis.approved_by, wis.completion_note, wis.status,
+        wis.is_optional, wis.created_at, wis.completed_at, wis.updated_at,
+        wi.project_id
+      FROM workflow_instance_steps wis
+      INNER JOIN workflow_instances wi ON wi.id = wis.instance_id
+      WHERE wis.id = ?
+    `).get(stepId);
+
+    if (!step) {
+      return null;
+    }
+
+    const assigneeIds = this.db.prepare(`
+      SELECT user_id
+      FROM workflow_step_assignees
+      WHERE step_id = ?
+      ORDER BY assigned_at
+    `).all(stepId).map((item) => item.user_id);
+
+    return {
+      id: step.id,
+      instanceId: step.instance_id,
+      projectId: step.project_id,
+      templateStepId: step.template_step_id,
+      sequenceNo: step.sequence_no,
+      name: step.name,
+      description: step.description,
+      assignee: step.assignee,
+      assigneeIds,
+      handoverTo: step.handover_to,
+      approvedBy: step.approved_by,
+      completionNote: step.completion_note,
+      status: step.status,
+      isOptional: Boolean(step.is_optional),
+      createdAt: step.created_at,
+      completedAt: step.completed_at,
+      updatedAt: step.updated_at,
+    };
+  }
+
   async getProjectProgress(projectId) {
     const row = this.db.prepare(`
       SELECT
@@ -216,6 +260,16 @@ class SqliteWorkflowInstanceRepository {
   async addStep(instanceId, input) {
     const timestamp = nowIso();
     runInTransaction(this.db, () => {
+      const instanceRow = this.db.prepare(`
+        SELECT template_id
+        FROM workflow_instances
+        WHERE id = ?
+      `).get(instanceId);
+
+      if (!instanceRow) {
+        throw new Error("Adım eklenecek iş akışı bulunamadı.");
+      }
+
       const maxSequence = this.db.prepare(`
         SELECT COALESCE(MAX(sequence_no), 0) AS max_sequence
         FROM workflow_instance_steps
@@ -226,6 +280,23 @@ class SqliteWorkflowInstanceRepository {
       const sequenceNo = Number(input.sequenceNo || (maxSequence + 1));
       const assigneeIds = Array.isArray(input.assigneeIds) ? input.assigneeIds : [];
       const assigneeSummary = assigneeIds.join(", ");
+      const templateStepId = input.templateStepId || randomUUID();
+
+      if (!input.templateStepId) {
+        this.db.prepare(`
+          INSERT INTO workflow_template_steps (
+            id, template_id, sequence_no, name, description, default_assignee, is_optional
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          templateStepId,
+          instanceRow.template_id,
+          sequenceNo,
+          input.name,
+          input.description || "",
+          assigneeSummary,
+          input.isOptional ? 1 : 0,
+        );
+      }
 
       this.db.prepare(`
         UPDATE workflow_instance_steps
@@ -241,7 +312,7 @@ class SqliteWorkflowInstanceRepository {
       `).run(
         stepId,
         instanceId,
-        input.templateStepId || null,
+        templateStepId,
         sequenceNo,
         input.name,
         input.description || "",
