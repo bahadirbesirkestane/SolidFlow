@@ -4,29 +4,6 @@ const bootstrapRulesPageRefs = window.rulesPageRefs;
 const bootstrapUserWorkspacePageRefs = window.userWorkspacePageRefs;
 const bootstrapErpPageRefs = window.erpPageRefs;
 
-const {
-  searchInput: bootstrapSearchInput,
-  partListSearchInput: bootstrapPartListSearchInput,
-  resultsBody: bootstrapResultsBody,
-  folderInput: bootstrapFolderInput,
-  statusText: bootstrapStatusText,
-} = window.workflowPageRefs;
-const {
-  fileNameRulesBody: bootstrapFileNameRulesBody,
-  overrideRulesBody: bootstrapOverrideRulesBody,
-} = window.rulesPageRefs;
-const {
-  projectList: bootstrapProjectList,
-  userDirectory: bootstrapUserDirectory,
-  selectedProjectPanel: bootstrapSelectedProjectPanel,
-  projectFolderInput: bootstrapProjectFolderInput,
-} = window.operationsPageRefs;
-const {
-  userWorkspaceUserSelect: bootstrapUserWorkspaceUserSelect,
-  userWorkspaceList: bootstrapUserWorkspaceList,
-} = window.userWorkspacePageRefs;
-const { erpWorkOrderList: bootstrapErpWorkOrderList } = window.erpPageRefs;
-
 const clickHandlersById = {
   scanButton: async () => scanFolder(),
   resetPartListButton: async () => resetPartListEdits(),
@@ -54,6 +31,8 @@ const clickHandlersById = {
   resetKeywordRulesButton: async () => clearKeywordRulesView(),
   resetFileNameRulesButton: async () => clearFileNameRulesView(),
   resetOverridesButton: async () => clearOverridesView(),
+  sidebarCollapseButton: async () => toggleShellNavigation(),
+  shellNavToggleButton: async () => toggleShellNavigation(),
 };
 
 function isRuleTableTarget(target) {
@@ -100,6 +79,7 @@ document.addEventListener("click", async (event) => {
 
     event.preventDefault();
     const pageName = navigateToPage(pageLink.dataset.pageLink);
+    closeShellNavigation();
     if (window.syncSidebarGroupState) {
       window.syncSidebarGroupState(pageName);
     }
@@ -111,6 +91,34 @@ document.addEventListener("click", async (event) => {
   if (resultViewButton) {
     event.preventDefault();
     switchResultView(resultViewButton.dataset.resultView);
+    return;
+  }
+
+  const drawerOpenTarget = event.target.closest("[data-drawer-open]");
+  if (drawerOpenTarget) {
+    event.preventDefault();
+    openOperationsDrawer(drawerOpenTarget.dataset.drawerOpen);
+    return;
+  }
+
+  const drawerCloseTarget = event.target.closest("[data-drawer-close]");
+  if (drawerCloseTarget) {
+    event.preventDefault();
+    closeOperationsDrawer();
+    return;
+  }
+
+  const drawerTabTarget = event.target.closest("[data-drawer-tab]");
+  if (drawerTabTarget) {
+    event.preventDefault();
+    openOperationsDrawer(drawerTabTarget.dataset.drawerTab);
+    return;
+  }
+
+  const modelPreviewCloseTarget = event.target.closest("[data-model-preview-close]");
+  if (modelPreviewCloseTarget) {
+    event.preventDefault();
+    closeModelPreviewModal();
     return;
   }
 
@@ -139,6 +147,17 @@ document.addEventListener("click", async (event) => {
     if (action === "export-part-list-excel") {
       event.preventDefault();
       await exportPartListToExcel();
+      return;
+    }
+
+    if (action === "set-pagination-page") {
+      event.preventDefault();
+      setPaginationPage(actionTarget.dataset.paginationView, Number(actionTarget.dataset.page));
+      if (actionTarget.dataset.paginationView === "workflow") {
+        renderRows(filteredRows());
+      } else {
+        renderPartList(filteredPartList());
+      }
       return;
     }
   }
@@ -191,11 +210,13 @@ document.addEventListener("input", (event) => {
   const target = event.target;
 
   if (target === bootstrapWorkflowPageRefs.searchInput) {
+    setPaginationPage("workflow", 1);
     renderRows(filteredRows());
     return;
   }
 
   if (target === bootstrapWorkflowPageRefs.partListSearchInput) {
+    setPaginationPage("parts", 1);
     renderPartList(filteredPartList());
     return;
   }
@@ -250,6 +271,13 @@ document.addEventListener("change", async (event) => {
   handlePartListChange(event);
 });
 
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeModelPreviewModal();
+    closeOperationsDrawer();
+  }
+});
+
 if (bootstrapWorkflowPageRefs.resultsBody) {
   bootstrapWorkflowPageRefs.resultsBody.addEventListener("click", handleBodyClick);
 }
@@ -282,6 +310,16 @@ if (bootstrapErpPageRefs.erpWorkOrderList) {
   bootstrapErpPageRefs.erpWorkOrderList.addEventListener("click", handleErpClick);
 }
 
+window.addEventListener("resize", () => {
+  if (!window.matchMedia("(max-width: 1200px)").matches) {
+    const currentNavState = state.viewState?.nav || {};
+    setShellNavigationState({
+      collapsed: currentNavState.collapsed,
+      mobileOpen: false,
+    });
+  }
+});
+
 window.addEventListener("popstate", async () => {
   const pageName = getPageForPath(window.location.pathname || "/");
   switchPage(pageName);
@@ -294,6 +332,8 @@ window.addEventListener("popstate", async () => {
 
 window.addEventListener("load", async () => {
   try {
+    setShellNavigationState(state.viewState?.nav || { collapsed: false, mobileOpen: false });
+    setOperationsDrawerState(state.viewState?.operationsDrawer || { isOpen: false, activePanel: "open-jobs" });
     switchResultView(state.resultView);
     if (bootstrapOperationsPageRefs.projectFolderInput && bootstrapWorkflowPageRefs.folderInput) {
       bootstrapOperationsPageRefs.projectFolderInput.value = bootstrapWorkflowPageRefs.folderInput.value.trim();

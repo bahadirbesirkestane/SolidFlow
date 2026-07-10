@@ -10,13 +10,14 @@ class SqliteProjectRepository {
     const id = randomUUID();
     const timestamp = nowIso();
     this.db.prepare(`
-      INSERT INTO projects (id, code, name, description, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO projects (id, code, name, description, folder_path, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       project.code,
       project.name,
       project.description || "",
+      project.folderPath || "",
       "active",
       timestamp,
       timestamp,
@@ -27,7 +28,7 @@ class SqliteProjectRepository {
 
   async getById(projectId) {
     const row = this.db.prepare(`
-      SELECT id, code, name, description, status, created_at, updated_at
+      SELECT id, code, name, description, folder_path, status, created_at, updated_at
       FROM projects
       WHERE id = ?
     `).get(projectId);
@@ -37,7 +38,7 @@ class SqliteProjectRepository {
 
   async listAll() {
     const rows = this.db.prepare(`
-      SELECT id, code, name, description, status, created_at, updated_at
+      SELECT id, code, name, description, folder_path, status, created_at, updated_at
       FROM projects
       ORDER BY created_at DESC
     `).all();
@@ -80,6 +81,7 @@ function mapProject(row) {
     code: row.code,
     name: row.name,
     description: row.description,
+    folderPath: row.folder_path || "",
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

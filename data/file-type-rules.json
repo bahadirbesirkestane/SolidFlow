@@ -54,5 +54,12 @@
     "defaultProcess": "Dokumantasyon",
     "defaultServiceType": "Dokuman",
     "isActive": true
+  },
+  {
+    "extension": ".GLB",
+    "displayName": "3D Model",
+    "defaultProcess": "Dokumantasyon",
+    "defaultServiceType": "3D Onizleme",
+    "isActive": true
   }
 ]

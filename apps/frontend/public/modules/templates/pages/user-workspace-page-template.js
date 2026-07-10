@@ -33,11 +33,11 @@ window.APP_PAGE_TEMPLATES["user-workspace"] = `
     </div>
 
     <p id="userWorkspaceStatusText" class="status">Kullanıcı işleri hazırlanıyor...</p>
-    <section class="ops-block elevated-block">
+    <section class="ops-block summary-surface">
       <div id="userWorkspaceSummary" class="ops-summary"></div>
     </section>
 
-    <section class="ops-block elevated-block">
+    <section class="ops-block">
       <div class="table-header">
         <div>
           <h3>Atanmış Aktif İşler</h3>

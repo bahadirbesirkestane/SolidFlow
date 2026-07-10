@@ -57,9 +57,15 @@ const { GetErpWorkOrderDetailUseCase } = require("./application/use-cases/get-er
 const { ErpDispatchPlanner } = require("./application/services/erp-dispatch-planner");
 const { StartErpWorkOrderUseCase } = require("./application/use-cases/start-erp-work-order-use-case");
 const { SelectFolderUseCase } = require("./application/use-cases/select-folder-use-case");
+const { GetProjectModelPreviewUseCase } = require("./application/use-cases/get-project-model-preview-use-case");
+const { StreamProjectModelPreviewUseCase } = require("./application/use-cases/stream-project-model-preview-use-case");
+const { GetScanModelPreviewUseCase } = require("./application/use-cases/get-scan-model-preview-use-case");
+const { StreamScanModelPreviewUseCase } = require("./application/use-cases/stream-scan-model-preview-use-case");
 const { createAppConfig } = require("./config/app-config");
 const { createHttpServer } = require("./presentation/http/server-factory");
 const { WindowsFolderPicker } = require("./infrastructure/services/windows-folder-picker");
+const { GlbModelPreviewService } = require("./infrastructure/services/glb-model-preview-service");
+const { CadConversionService } = require("./infrastructure/services/CadConversionService");
 
 function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const sqliteClient = new SqliteClient(rootPath);
@@ -90,6 +96,11 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   });
   const projectScanner = new LocalProjectScanner();
   const folderPickerService = new WindowsFolderPicker();
+  const modelPreviewService = new GlbModelPreviewService();
+  const cadConversionService = new CadConversionService({
+    rootPath,
+    config: appConfig.cadConversion,
+  });
   const workflowEngine = new WorkflowEngine();
   const reportExporter = new WorkflowReportExporter(rootPath);
   const operationsReportExporter = new OperationsReportExporter(rootPath);
@@ -109,6 +120,7 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     keywordRuleRepository,
     fileNameRuleRepository,
     partOverrideRepository,
+    cadConversionService,
   });
   const createWorkflowInstancesUseCase = new CreateWorkflowInstancesUseCase({
     projectRepository,
@@ -141,6 +153,20 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     getErpWorkOrderDetail: new GetErpWorkOrderDetailUseCase({
       erpWorkOrderRepository,
       erpDispatchPlanner,
+    }),
+    getProjectModelPreview: new GetProjectModelPreviewUseCase({
+      projectRepository,
+      modelPreviewService,
+    }),
+    streamProjectModelPreview: new StreamProjectModelPreviewUseCase({
+      projectRepository,
+      modelPreviewService,
+    }),
+    getScanModelPreview: new GetScanModelPreviewUseCase({
+      modelPreviewService,
+    }),
+    streamScanModelPreview: new StreamScanModelPreviewUseCase({
+      modelPreviewService,
     }),
     startErpWorkOrder: new StartErpWorkOrderUseCase({
       erpWorkOrderRepository,

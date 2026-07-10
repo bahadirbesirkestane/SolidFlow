@@ -77,17 +77,210 @@ function setBulkWorkOrderStatus(message) {
   }
 }
 
+function setShellNavigationState(nextState = {}) {
+  state.viewState = state.viewState || {};
+  state.viewState.nav = {
+    collapsed: Boolean(nextState.collapsed),
+    mobileOpen: Boolean(nextState.mobileOpen),
+  };
+
+  const appShell = document.getElementById("appShell");
+  if (!appShell) {
+    return;
+  }
+
+  appShell.classList.toggle("nav-collapsed", state.viewState.nav.collapsed);
+  appShell.classList.toggle("nav-open", state.viewState.nav.mobileOpen);
+}
+
+function toggleShellNavigation() {
+  const isMobile = window.matchMedia("(max-width: 1200px)").matches;
+  const currentNavState = state.viewState?.nav || {};
+
+  if (isMobile) {
+    setShellNavigationState({
+      collapsed: false,
+      mobileOpen: !currentNavState.mobileOpen,
+    });
+    return;
+  }
+
+  setShellNavigationState({
+    collapsed: !currentNavState.collapsed,
+    mobileOpen: false,
+  });
+}
+
+function closeShellNavigation() {
+  const currentNavState = state.viewState?.nav || {};
+  setShellNavigationState({
+    collapsed: currentNavState.collapsed,
+    mobileOpen: false,
+  });
+}
+
+function setOperationsDrawerState({ isOpen, activePanel }) {
+  state.viewState = state.viewState || {};
+  state.viewState.operationsDrawer = {
+    isOpen: Boolean(isOpen),
+    activePanel: activePanel || "open-jobs",
+  };
+
+  const drawer = operationsPageRefs.operationsDrawer;
+  const backdrop = operationsPageRefs.operationsDrawerBackdrop;
+  if (!drawer || !backdrop) {
+    return;
+  }
+
+  drawer.classList.toggle("is-open", state.viewState.operationsDrawer.isOpen);
+  backdrop.classList.toggle("is-open", state.viewState.operationsDrawer.isOpen);
+
+  drawer.querySelectorAll("[data-drawer-tab]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.drawerTab === state.viewState.operationsDrawer.activePanel);
+  });
+
+  drawer.querySelectorAll("[data-drawer-panel]").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.drawerPanel === state.viewState.operationsDrawer.activePanel);
+  });
+}
+
+function openOperationsDrawer(panelName = "open-jobs") {
+  setOperationsDrawerState({
+    isOpen: true,
+    activePanel: panelName,
+  });
+}
+
+function closeOperationsDrawer() {
+  setOperationsDrawerState({
+    isOpen: false,
+    activePanel: state.viewState?.operationsDrawer?.activePanel || "open-jobs",
+  });
+}
+
+function setModelPreviewModalState(isOpen) {
+  const modal = document.getElementById("modelPreviewModal");
+  const backdrop = document.getElementById("modelPreviewBackdrop");
+  if (!modal || !backdrop) {
+    return;
+  }
+
+  modal.classList.toggle("is-open", Boolean(isOpen));
+  backdrop.classList.toggle("is-open", Boolean(isOpen));
+}
+
+function closeModelPreviewModal() {
+  setModelPreviewModalState(false);
+}
+
+function renderModelPreviewContent(payload) {
+  const titleElement = document.getElementById("modelPreviewTitle");
+  const statusElement = document.getElementById("modelPreviewStatus");
+  const contentElement = document.getElementById("modelPreviewContent");
+  if (!titleElement || !statusElement || !contentElement) {
+    return;
+  }
+
+  titleElement.textContent = payload.title || "3D Önizleme";
+
+  if (!payload.preview?.found) {
+    statusElement.textContent = payload.preview?.message || "3D Model Yüklenmedi";
+    contentElement.innerHTML = `
+      <div class="model-preview-empty">
+        <div>
+          <strong>3D Model Yüklenmedi</strong>
+          <p>${escapeHtml(payload.preview?.message || "Seçili kayıt için eşleşen .glb modeli bulunamadı.")}</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  statusElement.textContent = payload.preview.model?.relativePath
+    ? `${payload.preview.model.relativePath} görüntüleniyor.`
+    : "3D model hazır.";
+  contentElement.innerHTML = `
+    <model-viewer
+      src="${escapeAttribute(payload.preview.modelUrl)}"
+      camera-controls
+      touch-action="pan-y"
+      auto-rotate
+      environment-image="neutral"
+      exposure="0.8"
+      shadow-intensity="1.5"
+      shadow-softness="0.3"
+      stage-light-intensity="1"
+      ar
+      alt="${escapeAttribute(payload.title || "3D model")}"
+    ></model-viewer>
+  `;
+}
+
+async function openProjectModelPreview(projectId, signals = {}) {
+  setModelPreviewModalState(true);
+  renderModelPreviewContent({
+    title: signals.title || "Proje Modeli",
+    preview: {
+      found: false,
+      message: "3D model aranıyor...",
+    },
+  });
+
+  try {
+    const preview = await requestJson(`/api/operations/projects/${encodeURIComponent(projectId)}/3d-preview?partCode=${encodeURIComponent(signals.partCode || "")}&fileName=${encodeURIComponent(signals.fileName || "")}&effectiveFileName=${encodeURIComponent(signals.effectiveFileName || "")}`);
+    renderModelPreviewContent({
+      title: signals.title || "Proje Modeli",
+      preview,
+    });
+  } catch (error) {
+    renderModelPreviewContent({
+      title: signals.title || "Proje Modeli",
+      preview: {
+        found: false,
+        message: error.message,
+      },
+    });
+  }
+}
+
+async function openScanModelPreview(folderPath, signals = {}) {
+  setModelPreviewModalState(true);
+  renderModelPreviewContent({
+    title: signals.title || "Tarama Modeli",
+    preview: {
+      found: false,
+      message: "3D model aranıyor...",
+    },
+  });
+
+  try {
+    const preview = await requestJson(`/api/scan/3d-preview?folder=${encodeURIComponent(folderPath)}&partCode=${encodeURIComponent(signals.partCode || "")}&fileName=${encodeURIComponent(signals.fileName || "")}&effectiveFileName=${encodeURIComponent(signals.effectiveFileName || "")}`);
+    renderModelPreviewContent({
+      title: signals.title || "Tarama Modeli",
+      preview,
+    });
+  } catch (error) {
+    renderModelPreviewContent({
+      title: signals.title || "Tarama Modeli",
+      preview: {
+        found: false,
+        message: error.message,
+      },
+    });
+  }
+}
+
 async function pickFolderForInput(inputId, options = {}) {
   const input = document.getElementById(inputId);
   if (!input) {
-    throw new Error("Klasor alanı bulunamadi.");
+    throw new Error("Klasör alanı bulunamadı.");
   }
 
   const result = await requestJson("/api/system/select-folder", {
     method: "POST",
     body: JSON.stringify({
       initialPath: input.value.trim() || workflowPageRefs.folderInput?.value.trim() || "",
-      description: options.description || "Klasor secin",
+      description: options.description || "Klasör seçin",
     }),
   });
 
@@ -102,38 +295,32 @@ async function pickFolderForInput(inputId, options = {}) {
 
 async function handleFolderPickerAction(actionTarget) {
   const inputId = actionTarget.dataset.targetInput;
-  const description = actionTarget.dataset.pickerTitle || "Klasor secin";
+  const description = actionTarget.dataset.pickerTitle || "Klasör seçin";
   const statusTarget = actionTarget.dataset.statusTarget || "";
 
   try {
     if (statusTarget === "operations") {
-      setOperationsStatus("Klasor secici aciliyor...");
-    } else {
-      if (workflowPageRefs.statusText) {
-        workflowPageRefs.statusText.textContent = "Klasor secici aciliyor...";
-      }
+      setOperationsStatus("Klasör seçici açılıyor...");
+    } else if (workflowPageRefs.statusText) {
+      workflowPageRefs.statusText.textContent = "Klasör seçici açılıyor...";
     }
 
     const selectedPath = await pickFolderForInput(inputId, { description });
 
     if (statusTarget === "operations") {
-      setOperationsStatus(`Klasor secildi: ${selectedPath}`);
-    } else {
-      if (workflowPageRefs.statusText) {
-        workflowPageRefs.statusText.textContent = `Klasor secildi: ${selectedPath}`;
-      }
+      setOperationsStatus(`Klasör seçildi: ${selectedPath}`);
+    } else if (workflowPageRefs.statusText) {
+      workflowPageRefs.statusText.textContent = `Klasör seçildi: ${selectedPath}`;
     }
   } catch (error) {
-    const message = error.message === "Klasor secimi iptal edildi."
-      ? "Klasor secimi iptal edildi."
-      : `Klasor secilemedi: ${error.message}`;
+    const message = error.message === "Klasör seçimi iptal edildi."
+      ? "Klasör seçimi iptal edildi."
+      : `Klasör seçilemedi: ${error.message}`;
 
     if (statusTarget === "operations") {
       setOperationsStatus(message);
-    } else {
-      if (workflowPageRefs.statusText) {
-        workflowPageRefs.statusText.textContent = message;
-      }
+    } else if (workflowPageRefs.statusText) {
+      workflowPageRefs.statusText.textContent = message;
     }
   }
 }
@@ -143,6 +330,10 @@ function clearWorkflowView() {
   state.partList = [];
   state.partListBase = [];
   state.scanInsights = null;
+  if (state.viewState?.pagination) {
+    state.viewState.pagination.workflow.page = 1;
+    state.viewState.pagination.parts.page = 1;
+  }
   if (workflowPageRefs.searchInput) {
     workflowPageRefs.searchInput.value = "";
   }
@@ -191,6 +382,7 @@ function clearOperationsView() {
   renderAuditEvents();
   renderUserWorkspace();
   renderManagerDashboard();
+  closeOperationsDrawer();
   setOperationsStatus("Operasyon görünümü temizlendi. Sayfa açıldığında veriler otomatik gelir.");
 }
 
@@ -247,8 +439,16 @@ function createStatCard(label, value, tone = "") {
 }
 
 function renderStatusOptions(selectedStatus) {
+  const labels = {
+    pending: "Bekliyor",
+    ready: "Hazır",
+    in_progress: "İşlemde",
+    completed: "Tamamlandı",
+    skipped: "Atlandı",
+  };
+
   return ["pending", "ready", "in_progress", "completed", "skipped"]
-    .map((status) => `<option value="${status}" ${status === selectedStatus ? "selected" : ""}>${status}</option>`)
+    .map((status) => `<option value="${status}" ${status === selectedStatus ? "selected" : ""}>${labels[status]}</option>`)
     .join("");
 }
 
@@ -408,15 +608,15 @@ function canCreateWorkflowFromPart(item) {
     return false;
   }
 
-  if (process === "Satin Alma" || serviceType.includes("Tedarigi")) {
+  if (process === "Satın Alma" || serviceType.includes("Tedariği")) {
     return true;
   }
 
-  if (process === "Dis Hizmet" || serviceType.includes("Dis Hizmet") || serviceType.includes("Kesim")) {
+  if (process === "Dış Hizmet" || serviceType.includes("Dış Hizmet") || serviceType.includes("Kesim")) {
     return true;
   }
 
-  if (["Imalat", "Bukum", "Profil", "Torna/Freze", "Montaj", "Elektrik"].includes(process)) {
+  if (["İmalat", "Büküm", "Profil", "Torna/Freze", "Montaj", "Elektrik"].includes(process)) {
     return true;
   }
 

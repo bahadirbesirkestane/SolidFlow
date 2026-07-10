@@ -28,6 +28,7 @@ class CreateBulkWorkOrdersUseCase {
       code: projectCode,
       name: projectName,
       description: String(input.description || "").trim(),
+      folderPath: String(input.folderPath || "").trim(),
     });
 
     const createdWorkflows = await this.createWorkflowInstancesUseCase.execute(project.id, { workflows });

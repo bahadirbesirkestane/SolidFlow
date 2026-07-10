@@ -16,7 +16,7 @@ window.APP_PAGE_TEMPLATES.dashboard = `
     <div id="managerDashboardSummary" class="ops-summary dashboard-summary"></div>
 
     <div class="dashboard-focus-grid">
-      <section class="ops-block elevated-block">
+      <section class="ops-block">
         <div class="table-header">
           <h3>Aşama Yoğunluğu</h3>
           <span class="muted">Aktif adımlar</span>
@@ -24,7 +24,7 @@ window.APP_PAGE_TEMPLATES.dashboard = `
         <div id="managerStageBoard" class="manager-stage-board"></div>
       </section>
 
-      <section class="ops-block elevated-block">
+      <section class="ops-block">
         <div class="table-header">
           <h3>Dikkat Gerektiren Konular</h3>
           <span class="muted">Açık işler ve eşleşme riskleri</span>
@@ -33,7 +33,7 @@ window.APP_PAGE_TEMPLATES.dashboard = `
       </section>
     </div>
 
-    <section class="ops-block elevated-block">
+    <section class="ops-block">
       <div class="table-header">
         <div>
           <h3>Proje Takip Tablosu</h3>

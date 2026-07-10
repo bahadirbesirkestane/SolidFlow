@@ -214,6 +214,34 @@ function renderCountLines(countMap) {
     .join("");
 }
 
+function pickWorkflowPreviewSignals(instance, fallbackTitle = "Proje") {
+  const firstPart = instance?.itemPayload?.partList?.[0] || null;
+  const firstPartCode = Array.isArray(instance?.itemPayload?.partCodes) ? instance.itemPayload.partCodes[0] : "";
+  const firstFile = Array.isArray(instance?.itemPayload?.files) ? instance.itemPayload.files[0] : "";
+  const label = instance?.itemLabel || instance?.name || fallbackTitle;
+
+  return {
+    partCode: firstPart?.partCode || firstPartCode || "",
+    fileName: firstPart?.fileName || firstFile || "",
+    effectiveFileName: firstPart?.effectiveFileName || firstPart?.fileName || firstFile || "",
+    title: `${label} 3D Önizleme`,
+  };
+}
+
+function pickProjectPreviewSignals(dashboard) {
+  const firstWorkflow = Array.isArray(dashboard?.workflows) ? dashboard.workflows[0] : null;
+  if (firstWorkflow) {
+    return pickWorkflowPreviewSignals(firstWorkflow, dashboard?.project?.name || "Proje");
+  }
+
+  return {
+    partCode: "",
+    fileName: "",
+    effectiveFileName: "",
+    title: `${dashboard?.project?.name || "Proje"} 3D Önizleme`,
+  };
+}
+
 function renderSelectedProject() {
   const dashboard = state.operations.selectedProject;
   if (!dashboard) {
@@ -224,6 +252,7 @@ function renderSelectedProject() {
   const project = dashboard.project;
   const progress = dashboard.progress;
   const currentFolderSuggestion = getCurrentFolderSuggestion();
+  const projectPreviewSignals = pickProjectPreviewSignals(dashboard);
 
   operationsSelectedProjectPanel.innerHTML = `
     <div class="selected-project-header">
@@ -241,6 +270,18 @@ function renderSelectedProject() {
     <div class="inline-actions top-export-actions">
       <span class="muted">Raporlar: workflow, adım, açık iş ve audit kayıtları tek dosyada.</span>
       <div class="inline-actions">
+        <button
+          type="button"
+          class="secondary"
+          data-action="open-project-model-preview"
+          data-project-id="${project.id}"
+          data-part-code="${escapeAttribute(projectPreviewSignals.partCode)}"
+          data-file-name="${escapeAttribute(projectPreviewSignals.fileName)}"
+          data-effective-file-name="${escapeAttribute(projectPreviewSignals.effectiveFileName)}"
+          data-title="${escapeAttribute(projectPreviewSignals.title)}"
+        >
+          3D Önizleme
+        </button>
         <button type="button" class="secondary" data-action="assign-project-workflows" data-project-id="${project.id}">İşleri Kullanıcılara Aktar</button>
         <button type="button" class="secondary danger-button" data-action="delete-project" data-project-id="${project.id}">Projeyi Sil</button>
         <button type="button" class="secondary" data-action="download-operations-report" data-format="xlsx">Excel İndir</button>
@@ -297,6 +338,7 @@ function renderSelectedProject() {
 function renderWorkflowCard(instance) {
   const canAdvance = Boolean(instance.currentStep);
   const itemCountText = Number(instance.itemCount || 0) > 0 ? ` | Toplam kalem: ${instance.itemCount}` : "";
+  const previewSignals = pickWorkflowPreviewSignals(instance, instance?.name || "Workflow");
 
   return `
     <article class="workflow-card">
@@ -306,6 +348,17 @@ function renderWorkflowCard(instance) {
           <p class="muted">${escapeHtml(instance.itemLabel || instance.templateName || "Genel akış")} | ${instance.steps.length} adım${escapeHtml(itemCountText)}</p>
         </div>
         <div class="workflow-meta">
+          <button
+            class="secondary link-button"
+            data-action="open-project-model-preview"
+            data-project-id="${escapeAttribute(state.operations.selectedProjectId || "")}"
+            data-part-code="${escapeAttribute(previewSignals.partCode)}"
+            data-file-name="${escapeAttribute(previewSignals.fileName)}"
+            data-effective-file-name="${escapeAttribute(previewSignals.effectiveFileName)}"
+            data-title="${escapeAttribute(previewSignals.title)}"
+          >
+            3D Önizleme
+          </button>
           <button class="secondary danger-button link-button" data-action="delete-workflow-instance" data-instance-id="${instance.id}">Akışı Sil</button>
           <span class="badge ${instance.status === "completed" ? "good" : "warn"}">${escapeHtml(instance.status)}</span>
           <strong>%${instance.progressPercent}</strong>
@@ -541,6 +594,16 @@ async function handleOperationsClick(event) {
       return;
     }
 
+    if (action === "open-project-model-preview") {
+      await openProjectModelPreview(actionTarget.dataset.projectId, {
+        partCode: actionTarget.dataset.partCode,
+        fileName: actionTarget.dataset.fileName,
+        effectiveFileName: actionTarget.dataset.effectiveFileName,
+        title: actionTarget.dataset.title,
+      });
+      return;
+    }
+
     if (action === "save-step") {
       await saveStepFromRow(actionTarget.closest("tr"));
       return;
@@ -574,6 +637,7 @@ async function handleOperationsClick(event) {
 
     if (action === "download-operations-report") {
       await downloadOperationsReport(actionTarget.dataset.format);
+      return;
     }
   } catch (error) {
     setOperationsStatus(`İşlem hatası: ${error.message}`);

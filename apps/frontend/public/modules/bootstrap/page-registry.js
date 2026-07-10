@@ -7,7 +7,7 @@ const PAGE_REGISTRY = {
   projects: {
     path: "/operasyon-merkezi",
     title: "Operasyon Merkezi",
-    description: "Proje, kullanıcı, iş akışı, açık iş ve audit akışını tek merkezden yönet.",
+    description: "Projeler, iş akışları, kullanıcılar ve audit süreçlerini tek merkezden yönet.",
   },
   "user-workspace": {
     path: "/kullanici-is-ekrani",
@@ -72,7 +72,7 @@ const PAGE_REGISTRY = {
   "settings-center": {
     path: "/yonetim/ayarlar",
     title: "Ayarlar",
-    description: "Sistem davranışı, varsayılanlar ve yönetimsel tercihler.",
+    description: "Sistem davranışı, varsayılanlar ve yönetsel tercihler.",
   },
   "data-center": {
     path: "/yonetim/veri",

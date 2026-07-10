@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 
 function createHttpServer({ application, publicDir, defaultScanDir, frontendConfig = {} }) {
   return http.createServer(async (request, response) => {
@@ -33,6 +34,32 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
 
         const result = await application.scanProject.execute(targetFolder);
         sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/scan/3d-preview") {
+        const result = await application.getScanModelPreview.execute(
+          path.resolve(url.searchParams.get("folder") || ""),
+          {
+            partCode: url.searchParams.get("partCode") || "",
+            fileName: url.searchParams.get("fileName") || "",
+            effectiveFileName: url.searchParams.get("effectiveFileName") || "",
+          },
+        );
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/scan/3d-model") {
+        const preview = await application.streamScanModelPreview.execute(
+          path.resolve(url.searchParams.get("folder") || ""),
+          {
+            partCode: url.searchParams.get("partCode") || "",
+            fileName: url.searchParams.get("fileName") || "",
+            effectiveFileName: url.searchParams.get("effectiveFileName") || "",
+          },
+        );
+        sendFileStream(response, preview.absolutePath, preview.contentType);
         return;
       }
 
@@ -133,6 +160,28 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
       if (request.method === "GET" && projectAuditMatch) {
         const result = await application.listProjectAuditEvents.execute(projectAuditMatch.projectId);
         sendJson(response, 200, result);
+        return;
+      }
+
+      const projectPreviewMatch = matchPath(url.pathname, "/api/operations/projects/:projectId/3d-preview");
+      if (request.method === "GET" && projectPreviewMatch) {
+        const result = await application.getProjectModelPreview.execute(projectPreviewMatch.projectId, {
+          partCode: url.searchParams.get("partCode") || "",
+          fileName: url.searchParams.get("fileName") || "",
+          effectiveFileName: url.searchParams.get("effectiveFileName") || "",
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      const projectModelMatch = matchPath(url.pathname, "/api/operations/projects/:projectId/3d-model");
+      if (request.method === "GET" && projectModelMatch) {
+        const preview = await application.streamProjectModelPreview.execute(projectModelMatch.projectId, {
+          partCode: url.searchParams.get("partCode") || "",
+          fileName: url.searchParams.get("fileName") || "",
+          effectiveFileName: url.searchParams.get("effectiveFileName") || "",
+        });
+        sendFileStream(response, preview.absolutePath, preview.contentType);
         return;
       }
 
@@ -302,7 +351,7 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
         return;
       }
 
-      sendStaticFile(response, filePath);
+      sendStaticFile(request, response, filePath);
     } catch (error) {
       sendJson(response, 500, {
         error: "Sunucu hatasi",
@@ -323,7 +372,10 @@ function sendJson(response, statusCode, payload) {
 }
 
 function sendText(response, statusCode, payload, contentType = "text/plain; charset=utf-8") {
-  response.writeHead(statusCode, { "Content-Type": contentType });
+  response.writeHead(statusCode, {
+    "Content-Type": contentType,
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  });
   response.end(payload);
 }
 
@@ -336,6 +388,16 @@ function sendBinary(response, statusCode, payload, contentType, fileName) {
     Expires: "0",
   });
   response.end(payload);
+}
+
+function sendFileStream(response, filePath, contentType) {
+  response.writeHead(200, {
+    "Content-Type": contentType,
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  });
+  fs.createReadStream(filePath).pipe(response);
 }
 
 async function readJsonBody(request) {
@@ -377,27 +439,67 @@ function matchPath(pathname, template) {
   return params;
 }
 
-function sendStaticFile(response, filePath) {
+function sendStaticFile(request, response, filePath) {
   const contentTypes = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
   };
 
-  fs.access(filePath, fs.constants.F_OK, (error) => {
+  fs.stat(filePath, (error, stats) => {
     if (error) {
       sendText(response, 404, "Dosya bulunamadi.");
       return;
     }
 
-    response.writeHead(200, {
-      "Content-Type": contentTypes[path.extname(filePath).toLowerCase()] || "text/plain; charset=utf-8",
-      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-      Pragma: "no-cache",
-      Expires: "0",
-    });
-    fs.createReadStream(filePath).pipe(response);
+    const extension = path.extname(filePath).toLowerCase();
+    const contentType = contentTypes[extension] || "text/plain; charset=utf-8";
+    const cacheControl = extension === ".html"
+      ? "no-store, no-cache, must-revalidate, proxy-revalidate"
+      : "public, max-age=3600, stale-while-revalidate=86400";
+    const headers = {
+      "Content-Type": contentType,
+      "Cache-Control": cacheControl,
+      Vary: "Accept-Encoding",
+      "Last-Modified": stats.mtime.toUTCString(),
+    };
+
+    const acceptsEncoding = String(request.headers["accept-encoding"] || "");
+    const compressor = createCompressionStream(extension, acceptsEncoding);
+    if (!compressor) {
+      headers["Content-Length"] = stats.size;
+      response.writeHead(200, headers);
+      fs.createReadStream(filePath).pipe(response);
+      return;
+    }
+
+    headers["Content-Encoding"] = compressor.encoding;
+    response.writeHead(200, headers);
+    fs.createReadStream(filePath).pipe(compressor.stream).pipe(response);
   });
+}
+
+function createCompressionStream(extension, acceptsEncoding) {
+  const compressibleExtensions = new Set([".html", ".css", ".js", ".json", ".svg", ".txt"]);
+  if (!compressibleExtensions.has(extension)) {
+    return null;
+  }
+
+  if (acceptsEncoding.includes("br")) {
+    return {
+      encoding: "br",
+      stream: zlib.createBrotliCompress(),
+    };
+  }
+
+  if (acceptsEncoding.includes("gzip")) {
+    return {
+      encoding: "gzip",
+      stream: zlib.createGzip(),
+    };
+  }
+
+  return null;
 }
 
 module.exports = {

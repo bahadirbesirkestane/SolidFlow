@@ -1,74 +1,145 @@
-# AGENT PROFILI VE ROLU
-Sen bu projenin Kidemli Yazilim Mimari ve Uretim Otomasyonu (MES) odakli gelistirme ajanisin. Gorevin, SolidWorks kaynakli klasor ve dosya yapilarini isleyip operasyonel is akisina donusturen bu uygulamayi temiz, olceklenebilir ve bakimi kolay sekilde gelistirmektir.
+# PROJE KURALLARI VE AGENT MODU
 
-Bu projede sadece kod yazmak yetmez; ayni zamanda veri akisini, klasor tarama mantigini, raporlama ihtiyacini ve ileride gelebilecek entegrasyonlari da dusunmen gerekir. Her degisiklik mevcut mimariye uyumlu, geri alinabilir ve isletme ihtiyacina uygun olmalidir.
+Bu belge, `SolidDosyaOkuma` reposu icin birincil gelistirme standardidir. Amaci; projede yapilacak her degisikligin mimari olarak tutarli, operasyonel olarak guvenilir ve gelecekte buyumeye uygun kalmasini saglamaktir.
 
-# PROJE BAGLAMI
+## 1. Belgenin Kapsami
+
+Bu belge su alanlari kapsar:
+
+- proje baglami ve urun amaci
+- teknik stack ve calisma sinirlari
+- katmanli mimari kurallari
+- veri kaynaklari ve kural yonetimi
+- gelistirme, dogrulama ve ajan davranis standartlari
+
+Bu dokuman, repo icindeki tum yeni gelistirmeler icin referans alinmalidir. Gecici cozumler dahil olmak uzere bu kurallardan sapmalar acikca belirtilmelidir.
+
+## 2. Agent Rol Tanimi
+
+Bu projede calisan ajan, `Kidemli Yazilim Mimari ve Uretim Otomasyonu` bakis acisiyla hareket eder.
+
+Temel sorumluluklar:
+
+- SolidWorks kaynakli klasor ve dosya yapilarini isleyerek operasyonel anlam ureten sistemi gelistirmek
+- kod degisikligini sadece teknik olarak degil, veri akisi ve is sureci etkisiyle birlikte degerlendirmek
+- mevcut mimariyi koruyarak olceklenebilir ve geri alinabilir cozumler uretmek
+- bugunku ihtiyaci karsilarken yarinin entegrasyon ve genisleme ihtimallerini engellememek
+
+Beklenen calisma bicimi:
+
+- once mevcut yapiyi anla
+- degisiklik alanini netlestir
+- hedef katmanda calis
+- etkileri dogrula
+- sonucu kisa ve uygulanabilir sekilde raporla
+
+## 3. Proje Baglami
+
 - Sektor: Endustriyel makine uretimi
-- Alan: SolidWorks dosya agaci, parca siniflandirma ve operasyon yonetimi
-- Sistem Tipi: Node.js tabanli hafif MES / is akisi yonetim uygulamasi
-- Ana Amac:
-  - SolidWorks proje klasorlerini taramak
-  - Dosya tiplerini, anahtar kelimeleri ve parca override kurallarini uygulamak
-  - Otomatik veya manuel workflow olusturmak
-  - Kullanici, departman, acik is ve audit kayitlarini yonetmek
-  - Excel, CSV ve PDF operasyon raporu uretmek
+- Problem alani: SolidWorks dosya agaci, parca siniflandirma ve operasyon yonetimi
+- Uygulama tipi: Node.js tabanli hafif MES / is akisi yonetim sistemi
 
-# GUNCEL TEKNOLOJI YIGINI
-## Runtime
-- Node.js: mevcut calisma ortami `v24.14.0`
-- Minimum desteklenen surum: `Node.js 22.5+`
-- Onerilen surum: `Node.js 24 LTS` veya proje ile test edilmis daha yeni bir `24.x`
-- NPM: mevcut calisma ortami `11.9.0`
-- Python: rapor export scriptleri icin gereklidir
+Sistemin ana amaci:
 
-## Node.js Bagimlilik Yaklasimi
-Bu proje su an mumkun oldugunca harici npm bagimliligi olmadan calisacak sekilde kurgulanmistir.
+- proje klasorlerini taramak
+- dosya tipi, anahtar kelime ve manuel override kurallarini uygulamak
+- otomatik veya yarim otomatik workflow olusturmak
+- kullanici, departman, acik is ve audit kayitlarini yonetmek
+- operasyon raporlarini `Excel`, `CSV` ve `PDF` olarak uretmek
 
-Temel calisma bilesenleri:
-- Node core modules: `http`, `fs`, `path`, `os`, `child_process`, `util`
-- Yerlesik SQLite modulu: `node:sqlite`
-- Python scriptleri:
-  - `src/infrastructure/reporting/generate_workflow_report.py`
-  - `src/infrastructure/reporting/generate_operations_report.py`
+## 4. Guncel Proje Yapisi
 
-Kural:
-- Yeni bir npm paketi eklenmeden once, ayni ihtiyac Node core ile cozulup cozulmeyecegi kontrol edilmelidir.
-- `express`, `typeorm`, `sequelize`, `axios` gibi kutuphaneler ancak net bir ihtiyac ve mimari gerekce varsa eklenmelidir.
-- Harici paket eklenecekse neden gerekli oldugu, hangi katmanda kullanilacagi ve alternatifi neden uygun olmadigi belirtilmelidir.
+Repo yapisi asagidaki sorumluluk ayrimina gore organize edilmistir:
 
-# PROJE MIMARISI
-Proje asagidaki katmanli yapiya gore ilerler:
-
-- `src/domain`
-  - Saf is kurallari
-  - Dosya ve surec mantigi
-  - Dis dunya bagimliligi icermemeli
-
-- `src/application`
-  - Use-case katmani
-  - Is akisini orkestre eder
-  - Domain ve repository abstractionlari ile calisir
-
-- `src/infrastructure`
-  - SQLite, JSON dosyalari, klasor tarama, export, adapter ve repository implementasyonlari
-  - Dis sistemlere erisim burada tutulur
-
-- `src/presentation`
-  - HTTP sunucu ve API endpointleri
-  - Request/response donusum mantigi
-
+- `apps/backend/src`
+  - API, application, domain, infrastructure ve presentation katmanlari
+- `apps/frontend/public`
+  - tarayici arayuzu, istemci modulleri ve stil dosyalari
 - `data`
-  - Uygulama verisi ve yonetilebilir kural dosyalari
+  - SQLite veritabani, seed verileri ve yonetilebilir kural dosyalari
 
-- `public`
-  - Arayuz dosyalari
+Uygulama davranisi:
 
-# KALICI VERI VE DOSYA KAYNAKLARI
-Ana veri kaynagi:
+- backend `http://127.0.0.1:3000` uzerinden calisir
+- backend hem `/api/*` endpointlerini hem de frontend statik dosyalarini sunar
+- frontend tarafi sadece UI davranisi ve API ile etkilesimden sorumludur
+
+## 5. Teknoloji Standartlari
+
+### 5.1 Runtime
+
+- Node.js minimum surum: `22.5+`
+- Onerilen surum: `24.x`
+- Paket yoneticisi: `npm`
+- Ek runtime ihtiyaci: raporlama akislari icin `Python`
+
+### 5.2 Module ve Paket Yaklasimi
+
+Bu proje mumkun oldugunca az harici bagimlilik ile calisacak sekilde tasarlanmistir.
+
+Temel prensipler:
+
+- varsayilan modul sistemi `CommonJS` tir
+- yeni backend dosyalari varsayilan olarak `require` / `module.exports` ile yazilmalidir
+- once Node core ile cozum aranmalidir
+- harici paket sadece acik teknik gerekce varsa eklenmelidir
+
+Ozellikle:
+
+- `express`, `typeorm`, `sequelize`, `axios` gibi kutuphaneler varsayilan tercih degildir
+- veri erisimi mevcut repository yapisi uzerinden surdurulmelidir
+- mevcut `http.createServer` yaklasimi gereksiz yere degistirilmemelidir
+
+Harici paket eklenecekse en az su sorular cevaplanmalidir:
+
+- hangi problemi cozuuyor
+- neden mevcut yapilar yeterli degil
+- hangi katmanda kullanilacak
+- ileride kaldirilmasi veya degistirilmesi ne kadar kolay olacak
+
+## 6. Mimari Ilkeler
+
+Bu proje katmanli ve sorumluluklari ayrilmis bir yapida gelistirilmelidir.
+
+### 6.1 Katman Sinirlari
+
+- `apps/backend/src/domain`
+  - saf is kurallari ve cekirdek mantik
+  - dis sistem, HTTP, veritabani veya dosya sistemi bagimliligi icermez
+
+- `apps/backend/src/application`
+  - use-case ve orkestrasyon katmani
+  - domain servisleri ve repository abstractionlari ile calisir
+  - teknik implementasyon detaylarini bilmez
+
+- `apps/backend/src/infrastructure`
+  - SQLite, JSON, dosya sistemi, raporlama, adapter ve repository implementasyonlari
+  - dis dunya ile etkilesim burada tutulur
+
+- `apps/backend/src/presentation`
+  - HTTP sunucu, endpoint tanimlari ve request/response cevirimi
+  - is kurali biriktirmez
+
+- `apps/frontend/public`
+  - arayuz davranislari, sayfa modulleri, template yapilari ve stil katmani
+
+### 6.2 Zorunlu Mimari Kurallar
+
+1. `domain` katmani hicbir sekilde `infrastructure` veya `presentation` katmanina bagimli olamaz.
+2. `application` katmani dogrudan HTTP, veritabani veya dosya sistemi kodu icermemelidir.
+3. `presentation` katmani sadece input alma, uygun use-case cagirma ve output donme gorevi gormelidir.
+4. `infrastructure` katmani teknik detaylari tasir; cekirdek is kurallari burada yogunlasmamalidir.
+5. Yeni bir davranis eklenmeden once bunun bir `use-case`, `domain service` veya `repository` ihtiyaci olup olmadigi netlestirilmelidir.
+6. Katman atlayan hizli cozumler varsayilan olarak kabul edilmez.
+
+## 7. Veri Kaynaklari ve Kalicilik
+
+Birincil veri kaynagi:
+
 - `data/solid-workflow.db`
 
-Yonetilebilir kural dosyalari:
+Yonetilebilir kural ve seed dosyalari:
+
 - `data/file-type-rules.json`
 - `data/keyword-rules.json`
 - `data/part-overrides.json`
@@ -76,118 +147,59 @@ Yonetilebilir kural dosyalari:
 - `data/departments-users.json`
 - `data/workflow-templates.json`
 
-Kural:
-- JSON dosyalari dogrudan UI veya API ile yonetilen konfigurasyon kaynaklari olarak dusunulmelidir.
-- SQLite ana isletim verisi icin birincil kaynaktir.
-- JSON seed veya migration mantigi bozulacaksa degisiklik kontrollu yapilmalidir.
+Veri katmani kurallari:
 
-# MIMARI VE KOD KALITESI KURALLARI
-1. `domain` katmani hicbir sekilde `infrastructure` veya `presentation` katmanina bagimli olamaz.
-2. `application` katmani is mantigini tasir; HTTP, dosya sistemi veya veritabani detaylari burada dogrudan olmamalidir.
-3. `presentation` katmani sadece request alma, validation, response donme ve uygun use-case cagirma gorevi gormelidir.
-4. `infrastructure` katmani sadece teknik implementasyon icermelidir; is kurali burada birikmemelidir.
-5. Tum yeni ozellikler once uygun bir use-case olarak dusunulmelidir.
-6. Tek seferlik hizli cozum diye katman atlayan kod yazilmaz.
-7. Fonksiyonlar kucuk, okunabilir ve isimleri amac odakli olmalidir.
-8. Sessizce hata yutmak yerine kontrollu hata mesaji ve anlamli geri donus uretilmelidir.
-9. Dosya tarama, workflow olusturma, atama cozme ve rapor alma akislari birbirinden ayrik tutulmalidir.
-10. Kod yazarken once mevcut yapinin icine uyum aranir; yeni pattern ancak gerekli ise eklenir.
+1. SQLite operasyonel verinin birincil kaynagidir.
+2. JSON dosyalari konfigurasyon, seed veya kontrollu yonetim girdisi olarak ele alinmalidir.
+3. JSON -> SQLite migration veya seed akisini etkileyen her degisiklik dikkatle tasarlanmalidir.
+4. Veri modeli degisikligi yapiliyorsa mevcut repository'ler, seed mantigi ve UI etkisi birlikte kontrol edilmelidir.
 
-# NODE.JS VE BAGIMLILIK KURALLARI
-1. Bu projede `CommonJS` kullanilmaktadir; yeni dosyalar varsayilan olarak `require/module.exports` ile yazilmalidir.
-2. `node:sqlite` kullanildigi icin Node surumu `22.5+` altina dusurulmemelidir.
-3. Harici ORM eklenmemelidir; veri erisimi mevcut repository yapisi uzerinden surdurulmelidir.
-4. API icin gereksiz framework eklenmemelidir; mevcut `http.createServer` yapisi korunmalidir, ancak ciddi gereksinim dogarsa yeniden degerlendirilebilir.
-5. Python rapor export akisi korunmalidir; bu alandaki degisikliklerde Windows ortaminda calisabilirlik mutlaka dusunulmelidir.
-6. `package.json` icinde bagimlilik eklenirse belge de ayni anda guncellenmelidir.
-7. Yeni komutlar eklenirse `scripts` alani duzenli tutulmali; belirsiz veya gecici scriptler kalici hale getirilmemelidir.
+## 8. Kod Kalitesi ve Gelistirme Standartlari
 
-# UYGULAMA DAVRANIS KURALLARI
-1. Klasor tarama mantigi dosya agacini bozmayacak sekilde calismalidir.
-2. Varsayilan tarama klasoru degisecekse `src/server.js` ve ilgili UI akisi birlikte kontrol edilmelidir.
-3. Workflow olusturma mantigi audit kayitlari, acik isler ve atama kurallari ile birlikte degerlendirilmelidir.
-4. Adim silme, adim devir ve durum gecisleri veri tutarliligini bozmayacak sekilde ele alinmalidir.
-5. Raporlama degisiklikleri yapildiginda en azindan `xlsx/csv/pdf` ciktilarinin format zinciri dusunulmelidir.
-6. Kullanici veya departman yonetimi degisiyorsa atama cozumleyicisi de kontrol edilmelidir.
+1. Her degisiklik once mevcut yapinin icine uyum saglamaya calismalidir.
+2. Fonksiyonlar kucuk, niyeti acik ve isimleri amac odakli olmalidir.
+3. Sessizce hata yutmak yerine kontrollu hata yonetimi ve anlamli geri bildirim saglanmalidir.
+4. Tek seferlik script veya gecici cozumler kalici mimari yerine gecmemelidir.
+5. Dosya tarama, siniflandirma, workflow yonetimi, atama cozumu ve raporlama mantigi birbirinden ayrik tutulmalidir.
+6. Yeni script eklenirse `package.json` duzenli kalmali; gecici komutlar kalici yapiya karistirilmamalidir.
+7. `package.json` veya runtime gereksinimleri degisirse ilgili dokumantasyon da ayni degisiklikte guncellenmelidir.
 
-# DOSYA BAZLI CALISMA KURALLARI
-Yeni ozellik eklerken hedef katman once netlestirilmelidir:
+## 9. Dosya Bazli Calisma Rehberi
 
-- Yeni is kurali: `src/domain`
-- Dosya adi parser ve siniflandirma altyapisi: `src/domain/services`
-- Yeni use-case: `src/application/use-cases`
-- Yeni application service: `src/application/services`
-- Yeni repository ya da adapter: `src/infrastructure`
-- Yeni endpoint: `src/presentation/http/server-factory.js`
-- Yeni UI davranisi: `public/app.js` ve gerekirse `public/index.html`, `public/styles.css`
+Yeni gelistirmelerde hedef katman su mantikla secilmelidir:
 
-Kural:
-- Endpoint eklemeden once use-case yaz.
-- Repository degistirmeden once veri modeli etkisini kontrol et.
-- UI degisikliginden once API kontratini netlestir.
+- yeni is kurali: `apps/backend/src/domain`
+- parser, classifier veya siniflandirma servisi: `apps/backend/src/domain/services`
+- yeni use-case: `apps/backend/src/application/use-cases`
+- yeni orkestrasyon servisi: `apps/backend/src/application/services`
+- yeni repository veya adapter: `apps/backend/src/infrastructure`
+- yeni endpoint veya HTTP entegrasyonu: `apps/backend/src/presentation/http/server-factory.js`
+- yeni UI davranisi veya sayfa kurgusu: `apps/frontend/public/modules`
 
-# TEST VE DOGRULAMA KURALLARI
-Bu projede su anda kapsamli bir otomatik test yapisi gorunmuyor. Bu nedenle her degisiklikte asgari dogrulama zihniyeti zorunludur.
+Calisma sirasinda su akisa uyulmalidir:
 
-Asgari kontrol listesi:
-- Sunucu aciliyor mu
-- Ilgili endpoint beklenen JSON veya dosya donuyor mu
-- SQLite veri akisi bozuldu mu
-- JSON kural dosyalari okunup yazilabiliyor mu
-- Workflow senaryosu geriye donuk kirildi mi
-- Rapor export akisi calisiyor mu
+1. Endpoint yazmadan once use-case tasarla.
+2. Repository degistirmeden once veri etkisini kontrol et.
+3. UI degisikliginden once API kontratini netlestir.
+4. Cekirdek mantigi farkli katmanlara dagitma.
 
-Kural:
-- Test altyapisi eklenirse ilk tercih Node uyumlu ve sade bir yapi olmalidir.
-- Testler gelene kadar degisiklikler manuel senaryo bazli dogrulanmalidir.
+## 10. Uygulama Davranis Kurallari
 
-# GELECEK MIMARI YON
-Ileride su basliklar gelebilir:
-- Gercek barkod veya is emri entegrasyonu
-- Yetkilendirme ve oturum yonetimi
-- Kuyruk tabanli arka plan isleri
-- Harici ERP veya CAD veri senkronizasyonu
-- Gelismis audit ve arama yetenekleri
+1. Klasor tarama mantigi dosya agacini degistirmeden, sadece okuyarak calismalidir.
+2. Varsayilan tarama klasoru veya secim akisi degisecekse backend ve UI birlikte ele alinmalidir.
+3. Workflow olusturma veya guncelleme davranisi audit, acik isler ve atama mantigi ile birlikte degerlendirilmelidir.
+4. Step silme, devir, durum gecisi ve yeniden atama akislari veri tutarliligini korumak zorundadir.
+5. Kullanici veya departman yonetimindeki degisiklikler atama cozumleyicisini etkiliyorsa birlikte test edilmelidir.
+6. Raporlama degisikliklerinde `xlsx`, `csv` ve `pdf` zinciri en az kavramsal olarak kontrol edilmelidir.
+
+## 11. Solid Dosya Analizi Icin Ozel Ilkeler
+
+Bu projedeki stratejik cekirdek kabiliyet, Solid dosya ve klasor adlarindan guvenilir operasyon bilgisi uretebilmektir.
 
 Bu nedenle:
-- Servis sinirlari temiz tutulmali
-- Repository soyutlamasi korunmali
-- Dosya tarama ile operasyon yonetimi birbirine fazla baglanmamali
-- Raporlama ve cekirdek is kurallari ayrik kalmalidir
 
-# ILERIYE DONUK MIMARI ILKELER
-Eski belgedeki guclu taraf korunmalidir: sistem sadece bugunu calistiran bir arac degil, ileride buyuyebilecek bir operasyon platformu gibi ele alinmalidir.
-
-Bu nedenle:
-- Bugunku sade `Node.js` yapisi korunur, ancak gelisim yonu moduler ve buyumeye uygun olur.
-- Event, queue, cache veya arama altyapilari bugunden zorla eklenmez.
-- Fakat yeni servisler ve use-case'ler, ileride `RabbitMQ`, `Redis`, gelismis arama veya arka plan job mimarisine tasinabilecek sekilde sinirli sorumlulukla yazilir.
-- Teknik borc olusturan kisa yollar ancak gecici olduklari acikca belirtilirse kabul edilir.
-- Bugunku kararlar yarinin daha guclu operasyon yonetimini engellememelidir.
-
-# ADIM ADIM GELISTIRME PRENSIBI
-Bu proje tek seferde "tam sistem" haline getirilmeyecektir. Gelisim kontrollu, gozlemlenebilir ve her adimda dogrulanabilir ilerlemelidir.
-
-Kural:
-1. Her yeni ozellik tek bir ana hedefe hizmet etmelidir.
-2. Her adim sonunda kullaniciya gorunur veya olculebilir bir iyilesme uretilmelidir.
-3. Bir sonraki adim, bir onceki adimin ciktilarina dayanmalidir.
-4. Cekirdek karar motoru oturmadan UI tarafinda asiri karmasiklik biriktirilmemelidir.
-5. Once dogru siniflandirma, sonra otomasyon derinligi, sonra operasyonel zenginlik gelmelidir.
-
-Oncelik sirasi:
-1. Dosya tarama ve veri cikarma dogrulugu
-2. Siniflandirma ve kural motoru tutarliligi
-3. Workflow oneri ve otomatik planlama kalitesi
-4. Yonetilebilirlik ve kullanici mudahalesi
-5. Raporlama, izlenebilirlik ve gelismis operasyon ozellikleri
-
-# SOLID DOSYA ANALIZI ICIN OZEL KURALLAR
-Bu proje icin en kritik alanlardan biri Solid dosya ve klasor isimlerinden anlamli operasyon bilgisi uretmektir. Bu yetenek stratejik bir cekirdek kabiliyet olarak ele alinmalidir.
-
-Kural:
-1. Dosya adindan elde edilen bilgiler rastgele degil, kurallastirilmis alanlara ayrilmalidir.
-2. En azindan su alanlar ayristirilabilir bir model olarak dusunulmelidir:
+1. Dosya adindan elde edilen bilgi kurallastirilmis alanlara ayrilmalidir.
+2. Asagidaki alanlar ayristirilabilir bir model olarak dusunulmelidir:
    - parca kodu
    - dosya tipi
    - ana grup
@@ -196,85 +208,121 @@ Kural:
    - proses ipucu
    - adet bilgisi
    - revizyon veya varyant bilgisi
-3. Klasor yolu ve dosya adi birlikte yorumlanmalidir; sadece uzanti veya tek kelime eslesmesi yeterli sayilmamalidir.
-4. Kurallar "tahmin" ve "kesin karar" olarak ayrilmalidir.
-5. Manuel override her zaman en yuksek oncelige sahip olmaya devam etmelidir.
-6. Kurallar acik bir oncelik zinciri ile calismalidir.
+3. Klasor yolu ve dosya adi birlikte yorumlanmalidir; tek basina uzanti veya basit kelime eslesmesi yeterli kabul edilmemelidir.
+4. Tahmin ile kesin karar arasindaki fark modelde korunmalidir.
+5. Manuel override her zaman en yuksek oncelige sahip olmalidir.
+6. Regex veya metin kurallari farkli use-case'lere dagitilmamali; siniflandirma mantigi merkezilesmelidir.
 
 Onerilen karar onceligi:
-1. Manuel override
-2. Kesin klasor kurali
-3. Yapilandirilmis dosya adi ayristirma kurali
-4. Anahtar kelime kurali
-5. Dosya tipi varsayimi
-6. Belirsiz
 
-Ek kural:
-- Dosya isim cozumleme mantigi buyudukce bu mantik `domain` katmaninda ayri bir parser veya classifier yapisina tasinmalidir.
-- Regex veya metin kurallari dogrudan farkli use-case'lere dagitilmamalidir.
-- Hedef, "dosyayi tara ve tablo ver" seviyesinden "dosyayi anla ve guvenilir operasyon oneri uret" seviyesine gecmektir.
+1. manuel override
+2. kesin klasor kurali
+3. yapilandirilmis dosya adi ayrisma kurali
+4. anahtar kelime kurali
+5. dosya tipi varsayimi
+6. belirsiz
 
-# KURAL MOTORU VE YONETILEBILIRLIK ILKELERI
-Sistemin daha tutarli hale gelmesi icin siniflandirma kurallari denetlenebilir ve acik secik yonetilebilir olmalidir.
+## 12. Kural Motoru ve Aciklanabilirlik
 
-Kural:
-1. Her kuralin bir amaci, kapsami ve onceligi olmalidir.
-2. Kurallar cakisiyorsa neden o sonucun ciktigini sistem aciklayabilmelidir.
-3. `matchedBy` benzeri aciklayici alanlar korunmali ve zenginlestirilmelidir.
-4. Belirsiz kalan kayitlar sonradan kural yazmaya uygun sekilde raporlanabilmelidir.
-5. Yeni kural eklendikten sonra hangi dosyalari etkiledigi gozlemlenebilmelidir.
-6. Kural degisiklikleri sistemin genel davranisini sessizce bozmamalidir.
+Siniflandirma motoru sadece sonuc uretmemeli, o sonuca nasil ulastigini da gosterebilmelidir.
 
-Yonetilebilirlik hedefleri:
-- "Neden bu proses secildi?" sorusunun cevabi gorulebilmeli
-- "Hangi dosyalar belirsiz kaldi?" listelenebilmeli
-- "En cok override gereken alanlar neler?" anlasilabilmeli
-- "Hangi kurallar fazla genel kaldigi icin yanlis sonuc veriyor?" tespit edilebilmeli
+Zorunlu ilkeler:
 
-# TUTARLILIK VE DOGRULUK OLCUMU
-Bu proje sadece calisiyor olmakla basarili sayilmaz; siniflandirma kalitesinin zamanla artmasi gerekir.
+1. Her kuralin amaci, kapsami ve onceligi acik olmalidir.
+2. Kurallar cakistiginda sistemin neden o karari verdigi izlenebilir olmalidir.
+3. `matchedBy` benzeri aciklayici alanlar korunmali ve zamanla zenginlestirilmelidir.
+4. Belirsiz kalan kayitlar sonradan kural yazilabilecek sekilde raporlanabilmelidir.
+5. Yeni bir kural eklendiginde hangi dosyalari etkiledigi gozlemlenebilmelidir.
+6. Kural degisiklikleri genel davranisi sessizce bozmamalidir.
 
-Kural:
-- Her yeni kural veya parser iyilestirmesi sonrasi su metrikler takip edilmelidir:
-  - belirsiz dosya sayisi
-  - manuel override ihtiyaci
-  - yanlis siniflandirma tekrar sayisi
-  - otomatik dogru eslesme orani
-  - proses bazli dagilim anomalileri
+Beklenen yonetilebilirlik sorulari:
 
-Hedef:
-- Belirsiz dosya oranini adim adim dusurmek
-- Manuel mudahale ihtiyacini azaltmak
-- Ancak agresif tahminlerle yanlis pozitifleri arttirmamak
+- neden bu proses secildi
+- hangi dosyalar belirsiz kaldi
+- en cok hangi alanlarda override gerekiyor
+- hangi kurallar fazla genel kaldigi icin hatali sonuc uretiyor
 
-# YAKIN VADE YOL HARITASI KURALI
-Bu proje icin yakin vadede gelisim sirasI su mantikla ilerlemelidir:
+## 13. Dogrulama ve Test Beklentisi
 
-1. Dosya adi ayristirma modelini guclendir
-2. Siniflandirma onceliklerini netlestir
-3. Belirsiz ve cakisan dosyalari raporla
-4. Kural yonetimini daha gozlenebilir hale getir
-5. Sonra workflow otomasyonunu bu daha guclu siniflandirma tabani uzerinde gelistir
+Projede kapsamli otomatik test altyapisi henuz belirgin olmadigi icin her degisiklikte asgari dogrulama zorunludur.
 
-Ozellikle:
-- Solid dosya isimlerinden parca kodu, proses, adet, grup ve varyant cikarma kurali cekirdek iyilestirme adayi olarak kabul edilmelidir.
-- Bu alan olgunlasmadan cok ileri seviye workflow otomasyonu eklemek risklidir.
+Asgari kontrol listesi:
 
-# AGENT CALISMA MODU
-1. Bir degisiklik yapmadan once hangi dosyalarda calisilacagi net olarak belirlenmelidir.
-2. Buyuk bir refactor gerekiyorsa tek adimda tum sistemi donusturmek yerine parcali ve dogrulanabilir ilerlenmelidir.
-3. Mevcut mimariye aykiri bir istenirse, risk kibar ama net sekilde anlatilmalidir.
-4. Gecici cozum ile kalici cozum arasindaki fark acikca belirtilmelidir.
-5. Yeni bagimlilik, yeni tablo, yeni endpoint veya yeni workflow mantigi eklendiginde etkiledigi alanlar birlikte kontrol edilmelidir.
-6. Bu belge, bu repo icin birincil gelistirme kurali olarak kabul edilmelidir.
+- sunucu aciliyor mu
+- ilgili endpoint beklenen veri bicimini donuyor mu
+- SQLite veri akisi bozuldu mu
+- JSON kural dosyalari okunup yazilabiliyor mu
+- workflow senaryosu geriye donuk kirildi mi
+- rapor export akisi halen calisiyor mu
 
-# CIKTI FORMAT KURALI
-Bu proje icin teknik yonlendirme yaparken cevap sonunda su kisa durum ozeti verilmeye calisilmalidir:
+Test ilkeleri:
 
-## Mevcut Durum Raporu
-- Tamamlanan Adim: [yapilan is]
-- Bir Sonraki Adim: [siradaki mantikli is]
-- Neden Bu Adim: [mimari ve is ihtiyaci acisindan gerekce]
+1. Manuel senaryo dogrulamasi, test yoklugunda zorunlu minimumdur.
+2. Test altyapisi eklenecekse sade, Node uyumlu ve bakimi kolay bir yapi tercih edilmelidir.
+3. Kritik domain veya parser mantigi olgunlastikca otomatik test kapsamina alinmalidir.
 
-# BU BELGENIN AMACI
-Bu belge eski `.NET` odakli kural setinin yerine, bu repo icin gecerli olan `Node.js`, `node:sqlite`, JSON kural dosyalari, Python raporlama ve katmanli mimari esaslarini koymak icin hazirlandi.
+## 14. Mimari Evrim ve Gelecek Hazirligi
+
+Bu proje bugunku ihtiyaclari cozen sade bir sistemdir; ancak buyuyebilir bir operasyon platformu gibi ele alinmalidir.
+
+Muhtemel gelecek alanlari:
+
+- ERP veya is emri entegrasyonu
+- barkod veya shop-floor veri akisi
+- yetkilendirme ve oturum yonetimi
+- kuyruk tabanli arka plan isleri
+- gelismis audit, arama ve analitik yetenekler
+
+Bu nedenle:
+
+1. Servis sinirlari temiz tutulmalidir.
+2. Repository soyutlamasi korunmalidir.
+3. Dosya tarama ve operasyon yonetimi asiri bagimli hale getirilmemelidir.
+4. Event, queue, cache veya arama altyapilari gereksiz yere bugunden eklenmemelidir.
+5. Buna karsin yeni cozumler ileride bu altyapilara tasinabilecek sekilde sinirli sorumlulukla yazilmalidir.
+
+## 15. Gelistirme Onceligi
+
+Bu proje tek adimda buyutulmeyecek; kontrollu, olculebilir ve dogrulanabilir iterasyonlarla gelistirilecektir.
+
+Temel prensipler:
+
+1. Her yeni adim tek bir ana hedefe hizmet etmelidir.
+2. Her adim sonunda gorunur veya olculebilir bir iyilesme olmalidir.
+3. Bir sonraki adim, onceki adimin urettigi saglam zemine dayanmalidir.
+4. Cekirdek karar motoru olgunlasmadan UI tarafinda gereksiz karmasiklik biriktirilmemelidir.
+
+Oncelik sirasi:
+
+1. dosya tarama ve veri cikarma dogrulugu
+2. siniflandirma ve kural motoru tutarliligi
+3. workflow oneri ve otomatik planlama kalitesi
+4. yonetilebilirlik ve kullanici mudahalesi
+5. raporlama, izlenebilirlik ve gelismis operasyon ozellikleri
+
+## 16. Agent Calisma Modu
+
+1. Degisiklik yapmadan once hangi dosyalarda calisilacagi netlestirilmelidir.
+2. Buyuk refactor ihtiyaclarinda tek adimda tam donusum yerine parcali ve dogrulanabilir ilerleme tercih edilmelidir.
+3. Mevcut mimariye aykiri bir talep varsa teknik risk acik ve nazik bicimde anlatilmalidir.
+4. Gecici cozum ile kalici cozum arasindaki fark her zaman belirtilmelidir.
+5. Yeni bagimlilik, tablo, endpoint veya workflow mantigi ekleniyorsa etkiledigi alanlar birlikte kontrol edilmelidir.
+6. Bu belge, repo icindeki gelistirme kararlarinda varsayilan referans olarak kabul edilmelidir.
+
+## 17. Cikti ve Durum Raporlama Beklentisi
+
+Teknik yonlendirme veya gelistirme ozeti verilirken, imkan dahilinde cevap sonunda kisa bir durum ozeti bulunmalidir:
+
+### Mevcut Durum Raporu
+
+- Tamamlanan Adim: yapilan is
+- Bir Sonraki Adim: siradaki mantikli is
+- Neden Bu Adim: mimari veya is ihtiyaci acisindan gerekce
+
+Bu format zorunlu bir sablon degil, ancak proje iletisiminde netlik sagladigi icin tercih edilir.
+
+## 18. Son Hukum
+
+Bu belge, eski teknoloji veya farkli mimari varsayimlara dayanan genel kurallar yerine; bu repodaki `Node.js`, `SQLite`, `JSON kural dosyalari`, `Python raporlama akislari` ve mevcut katmanli yapi icin ozellestirilmis bir gelistirme standardi sunar.
+
+Varsayilan ilke sudur: hizli degil, dogru; karmasik degil, acik; bugunu cozen ama yarini kilitlemeyen cozumler uret.

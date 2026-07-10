@@ -32,5 +32,17 @@ window.appState = window.appState || {
   },
   viewState: {
     loadedPages: {},
+    pagination: {
+      workflow: { page: 1, pageSize: 12 },
+      parts: { page: 1, pageSize: 10 },
+    },
+    operationsDrawer: {
+      isOpen: false,
+      activePanel: "open-jobs",
+    },
+    nav: {
+      collapsed: false,
+      mobileOpen: false,
+    },
   },
 };

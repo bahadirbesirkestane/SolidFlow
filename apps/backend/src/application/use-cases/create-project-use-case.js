@@ -13,6 +13,7 @@ class CreateProjectUseCase {
       code: String(input.code).trim(),
       name: String(input.name).trim(),
       description: String(input.description || "").trim(),
+      folderPath: String(input.autoGenerateFromFolder || "").trim(),
     });
 
     if (input.autoGenerateFromFolder) {

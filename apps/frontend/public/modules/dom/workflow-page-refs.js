@@ -22,4 +22,6 @@ window.workflowPageRefs = {
   get bulkWorkOrderStatusText() { return document.getElementById("bulkWorkOrderStatusText"); },
   get bulkUploadPreview() { return document.getElementById("bulkUploadPreview"); },
   get prefillBulkWorkOrderButton() { return document.getElementById("prefillBulkWorkOrderButton"); },
+  get workflowPagination() { return document.getElementById("workflowPagination"); },
+  get partListPagination() { return document.getElementById("partListPagination"); },
 };

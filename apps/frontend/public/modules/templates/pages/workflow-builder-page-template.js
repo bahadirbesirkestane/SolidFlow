@@ -14,31 +14,47 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
         </div>
       </div>
 
-      <label for="folderInput">Taranacak klasör</label>
-      <div class="control-row">
-        <input
-          id="folderInput"
-          type="text"
-          value="C:\\Users\\O M E N\\Masaüstü\\SolidMontaj\\IN26016_TARTIM KONVOYOR"
-          spellcheck="false"
-        />
-        <button
-          type="button"
-          class="secondary"
-          data-action="pick-folder"
-          data-target-input="folderInput"
-          data-picker-title="Tarama yapılacak klasörü seç"
-        >
-          Klasör Seç
-        </button>
+      <div class="scan-command-grid">
+        <div class="scan-folder-field">
+          <label for="folderInput">Taranacak klasör</label>
+          <div class="control-row">
+            <input
+              id="folderInput"
+              type="text"
+              value="C:\\Users\\O M E N\\Masaüstü\\SolidMontaj\\IN26016_TARTIM KONVOYOR"
+              spellcheck="false"
+            />
+            <button
+              type="button"
+              class="secondary"
+              data-action="pick-folder"
+              data-target-input="folderInput"
+              data-picker-title="Tarama yapılacak klasörü seç"
+            >
+              Klasör Seç
+            </button>
+          </div>
+        </div>
+
+        <div class="scan-command-side">
+          <div class="page-topbar-note">
+            <strong>Otomatik çalışma</strong>
+            <span class="muted">Sayfa açıldığında klasör bilgisi varsa ilk tarama otomatik başlatılır.</span>
+          </div>
+          <div class="page-topbar-note">
+            <strong>Çıktı zinciri</strong>
+            <span class="muted">Tarama sonucu parça listesine, ardından toplu iş emrine ve operasyon paneline dönüşür.</span>
+          </div>
+        </div>
       </div>
+
       <p id="statusText" class="status">Sayfa açıldığında klasör bilgisi varsa ilk tarama otomatik yapılır.</p>
     </section>
 
     <section class="stats" id="stats"></section>
 
     <section class="scan-insights-grid">
-      <article class="panel insight-panel elevated-block">
+      <article class="panel insight-panel">
         <div class="table-header">
           <div>
             <h3>Kalite ve Kural Etkisi</h3>
@@ -49,7 +65,7 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
         <div id="scanImpactList" class="insight-list"></div>
       </article>
 
-      <article class="panel insight-panel elevated-block">
+      <article class="panel insight-panel">
         <div class="table-header">
           <div>
             <h3>Belirsiz Dosyalar</h3>
@@ -60,7 +76,7 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
       </article>
     </section>
 
-    <section class="panel results-shell elevated-block">
+    <section class="panel results-shell">
       <div class="results-shell-head">
         <div>
           <h2>Tarama Çıktıları</h2>
@@ -95,12 +111,14 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
                 <th>Süreç</th>
                 <th>Hizmet</th>
                 <th>Güven</th>
+                <th>3D</th>
                 <th>Kurala Git</th>
               </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
           </table>
         </div>
+        <div id="workflowPagination" class="pagination-shell"></div>
       </section>
 
       <section class="result-panel" data-result-panel="parts">
@@ -120,7 +138,7 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
           <strong>Not:</strong> Tarama sonrası ortaya çıkan parça listesi bu ekranda düzenlenir, ardından toplu iş emri olarak operasyona gönderilir.
         </div>
 
-        <section class="ops-block bulk-upload-panel elevated-block">
+        <section class="ops-block bulk-upload-panel">
           <div class="table-header">
             <div>
               <h4>Toplu İş Emrini Sisteme Yükle</h4>
@@ -167,6 +185,7 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
             <tbody id="partListBody"></tbody>
           </table>
         </div>
+        <div id="partListPagination" class="pagination-shell"></div>
       </section>
     </section>
   </section>

@@ -5,7 +5,7 @@ window.APP_PAGE_TEMPLATES["erp-center"] = `
     <div class="page-section-intro">
       <div>
         <h2>ERP Merkezi</h2>
-        <p class="muted">İş emirlerini, satır detaylarını ve operasyona geçiş durumunu ferah bir ekranda izle.</p>
+        <p class="muted">İş emirlerini, satır detaylarını ve operasyona geçiş durumunu daha ferah bir ekranda izle.</p>
       </div>
       <div class="inline-actions">
         <button id="refreshErpButton" class="secondary">Yenile</button>
@@ -17,7 +17,7 @@ window.APP_PAGE_TEMPLATES["erp-center"] = `
 
     <div class="erp-layout modern-erp-layout">
       <aside class="erp-sidebar">
-        <div class="ops-block elevated-block">
+        <div class="ops-block">
           <div class="table-header">
             <h3>İş Emirleri</h3>
             <span class="muted" id="erpWorkOrderCountText">0 emir</span>
@@ -27,7 +27,7 @@ window.APP_PAGE_TEMPLATES["erp-center"] = `
       </aside>
 
       <div class="erp-main">
-        <section class="ops-block elevated-block summary-surface">
+        <section class="ops-block summary-surface">
           <div id="erpSummary" class="ops-summary"></div>
         </section>
         <section id="erpDetailPanel" class="project-panel-empty">

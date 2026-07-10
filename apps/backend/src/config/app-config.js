@@ -27,6 +27,11 @@ function createAppConfig({ rootPath }) {
     frontend: {
       apiBaseUrl,
     },
+    cadConversion: {
+      enabled: normalizeBoolean(process.env.CAD_CONVERSION_ENABLED, false),
+      timeoutMs: Number(process.env.CAD_CONVERSION_TIMEOUT_MS || 180000),
+      converterExecutable: String(process.env.CAD_CONVERTER_EXECUTABLE || process.env.FREECAD_CMD || "").trim(),
+    },
   };
 }
 
@@ -49,6 +54,15 @@ function normalizeApiBaseUrl(value) {
   return trimmed.endsWith("/")
     ? trimmed.slice(0, -1)
     : trimmed;
+}
+
+function normalizeBoolean(value, fallbackValue) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return fallbackValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  return !["0", "false", "hayir", "no", "off"].includes(normalized);
 }
 
 module.exports = {

@@ -16,6 +16,8 @@ const {
   bulkWorkOrderNameInput: workflowBulkWorkOrderNameInput,
   bulkWorkOrderDescriptionInput: workflowBulkWorkOrderDescriptionInput,
   bulkUploadPreview: workflowBulkUploadPreview,
+  workflowPagination: workflowPaginationContainer,
+  partListPagination: partListPaginationContainer,
 } = window.workflowPageRefs;
 
 function getWorkflowFolder() {
@@ -26,12 +28,84 @@ function setWorkflowStatus(message) {
   workflowStatusText.textContent = message;
 }
 
+function getPaginationState(viewName) {
+  state.viewState = state.viewState || {};
+  state.viewState.pagination = state.viewState.pagination || {
+    workflow: { page: 1, pageSize: 12 },
+    parts: { page: 1, pageSize: 10 },
+  };
+
+  return state.viewState.pagination[viewName];
+}
+
+function setPaginationPage(viewName, pageNumber) {
+  const pagination = getPaginationState(viewName);
+  pagination.page = Math.max(1, Number(pageNumber) || 1);
+}
+
 function resetWorkflowTableState() {
   workflowStats.innerHTML = "";
   workflowResultsBody.innerHTML = "";
   workflowPartListStats.innerHTML = "";
   workflowPartListCountText.textContent = "0 kalem";
   workflowPartListBody.innerHTML = "";
+  renderPagination("workflow", [], workflowPaginationContainer);
+  renderPagination("parts", [], partListPaginationContainer);
+}
+
+function paginateItems(viewName, items) {
+  const pagination = getPaginationState(viewName);
+  const totalItems = Array.isArray(items) ? items.length : 0;
+  const pageSize = Math.max(1, Number(pagination.pageSize) || 10);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(Math.max(1, pagination.page), totalPages);
+  pagination.page = currentPage;
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageItems = items.slice(startIndex, startIndex + pageSize);
+
+  return {
+    pageItems,
+    totalItems,
+    pageSize,
+    currentPage,
+    totalPages,
+    startIndex,
+  };
+}
+
+function renderPagination(viewName, items, container) {
+  if (!container) {
+    return;
+  }
+
+  const { totalItems, totalPages, currentPage, startIndex, pageItems } = paginateItems(viewName, items);
+  if (totalItems === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const pageButtons = [];
+  for (let pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
+    pageButtons.push(`
+      <button
+        type="button"
+        class="pagination-button ${pageIndex === currentPage ? "is-active" : ""}"
+        data-action="set-pagination-page"
+        data-pagination-view="${viewName}"
+        data-page="${pageIndex}"
+      >
+        ${pageIndex}
+      </button>
+    `);
+  }
+
+  container.innerHTML = `
+    <span class="pagination-summary">
+      ${startIndex + 1}-${startIndex + pageItems.length} / ${totalItems} kayıt
+    </span>
+    ${pageButtons.join("")}
+  `;
 }
 
 function renderStats(summary) {
@@ -47,7 +121,7 @@ function renderStats(summary) {
     .map(([key, value]) => `${key}: ${value}`)
     .join(" | ");
 
-  stats.innerHTML = [
+  workflowStats.innerHTML = [
     createStatCard("Toplam dosya", summary.totalFiles),
     createStatCard("Süreç atanmış", summary.assignedFiles),
     createStatCard("Belirsiz", summary.uncertainFiles, "warning"),
@@ -60,13 +134,15 @@ function renderRows(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
     workflowResultsBody.innerHTML = `
       <tr>
-        <td colspan="8" class="muted">Henüz iş akışı sonucu yok. Sayfa açıldığında klasör bilgisi varsa ilk tarama otomatik yapılır.</td>
+        <td colspan="9" class="muted">Henüz iş akışı sonucu yok. Sayfa açıldığında klasör bilgisi varsa ilk tarama otomatik yapılır.</td>
       </tr>
     `;
+    renderPagination("workflow", [], workflowPaginationContainer);
     return;
   }
 
-  workflowResultsBody.innerHTML = rows.map((row) => {
+  const pagination = paginateItems("workflow", rows);
+  workflowResultsBody.innerHTML = pagination.pageItems.map((row) => {
     const badgeClass = row.confidence === "Belirsiz" ? "warn" : "good";
     return `
       <tr>
@@ -75,7 +151,7 @@ function renderRows(rows) {
           <div class="cell-stack">
             <strong>${escapeHtml(row.fileName)}</strong>
             <span class="muted">${escapeHtml(row.folder)}</span>
-            ${row.fileNameRule ? `<span class="muted">Dosya adı kuralı: ${escapeHtml(row.fileNameRule.name)} -> ${escapeHtml(row.fileNameRule.effectiveFileName)}</span>` : ""}
+            ${row.fileNameRule ? `<span class="muted">Dosya adı kuralı: ${escapeHtml(row.fileNameRule.name)} → ${escapeHtml(row.fileNameRule.effectiveFileName)}</span>` : ""}
           </div>
         </td>
         <td>${escapeHtml(row.fileType)}</td>
@@ -84,6 +160,18 @@ function renderRows(rows) {
         <td>${escapeHtml(row.serviceType)}</td>
         <td><span class="badge ${badgeClass}">${escapeHtml(row.confidence)}</span></td>
         <td>
+          <button
+            class="secondary link-button"
+            data-action="open-scan-model-preview"
+            data-part-code="${escapeAttribute(row.partCode || "")}"
+            data-file-name="${escapeAttribute(row.fileName)}"
+            data-effective-file-name="${escapeAttribute(row.effectiveFileName || row.fileName)}"
+            data-title="${escapeAttribute(`${row.partCode || row.fileName} 3D Onizleme`)}"
+          >
+            3D Aç
+          </button>
+        </td>
+        <td>
           <button class="link-button" data-action="prefill-override" data-part-code="${escapeAttribute(row.partCode || "")}" data-file-name="${escapeAttribute(row.fileName)}" data-process="${escapeAttribute(row.suggestedProcess)}" data-service-type="${escapeAttribute(row.serviceType)}">
             Override
           </button>
@@ -91,6 +179,8 @@ function renderRows(rows) {
       </tr>
     `;
   }).join("");
+
+  renderPagination("workflow", rows, workflowPaginationContainer);
 }
 
 function filteredRows() {
@@ -157,6 +247,7 @@ function renderPartList(partList) {
       </tr>
     `;
     renderBulkUploadPreview();
+    renderPagination("parts", [], partListPaginationContainer);
     return;
   }
 
@@ -165,7 +256,8 @@ function renderPartList(partList) {
     : `${partList.length} / ${state.partList.length} kalem`;
   renderPartListStats(partList);
 
-  workflowPartListBody.innerHTML = partList.map((item, index) => `
+  const pagination = paginateItems("parts", partList);
+  workflowPartListBody.innerHTML = pagination.pageItems.map((item, index) => `
     <tr>
       <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="partCode" value="${escapeAttribute(item.partCode || "")}" placeholder="Parça Kodu" /></td>
       <td>
@@ -182,7 +274,9 @@ function renderPartList(partList) {
       <td><input class="inline-input" data-entity="partList" data-index="${item._sourceIndex ?? index}" data-field="note" value="${escapeAttribute(item.note || "")}" placeholder="Opsiyonel not" /></td>
     </tr>
   `).join("");
+
   renderBulkUploadPreview();
+  renderPagination("parts", partList, partListPaginationContainer);
 }
 
 function renderBulkUploadPreview() {
@@ -222,9 +316,9 @@ function renderBulkUploadPreview() {
 
 function renderScanInsights(insights) {
   if (!insights) {
-    scanInsightsSummary.innerHTML = "";
-    scanImpactList.innerHTML = `<div class="empty-state">Kural etkisini görmek için önce klasör tara.</div>`;
-    uncertainFilesList.innerHTML = `<div class="empty-state">Belirsiz dosya listesi tarama sonrasında dolacak.</div>`;
+    workflowScanInsightsSummary.innerHTML = "";
+    workflowScanImpactList.innerHTML = `<div class="empty-state">Kural etkisini görmek için önce klasör tara.</div>`;
+    workflowUncertainFilesList.innerHTML = `<div class="empty-state">Belirsiz dosya listesi tarama sonrasında dolacak.</div>`;
     return;
   }
 
@@ -234,7 +328,7 @@ function renderScanInsights(insights) {
   const confidenceCounts = insights.confidenceCounts || {};
   const matchedBy = insights.matchedBy || {};
 
-  scanInsightsSummary.innerHTML = [
+  workflowScanInsightsSummary.innerHTML = [
     createStatCard("Belirsiz dosya", String(quality.uncertainFiles || 0), (quality.uncertainFiles || 0) > 0 ? "warning" : ""),
     createStatCard("Dosya adı dönüşümü", String(quality.transformedFiles || 0)),
     createStatCard("Override", String(quality.manualOverrides || 0)),
@@ -242,13 +336,13 @@ function renderScanInsights(insights) {
     createStatCard("Tahmini eşleşme", String(quality.estimatedMatches || 0)),
   ].join("");
 
-  scanImpactList.innerHTML = [
+  workflowScanImpactList.innerHTML = [
     createInsightSection("Kural Kaynakları", Object.entries(matchedBy)),
     createInsightSection("Güven Dağılımı", Object.entries(confidenceCounts)),
     createInsightSection("Dosya Adı Kuralı Etkisi", Object.entries(fileNameRuleHits)),
   ].join("");
 
-  uncertainFilesList.innerHTML = uncertainRows.length === 0
+  workflowUncertainFilesList.innerHTML = uncertainRows.length === 0
     ? `<div class="empty-state">Belirsiz dosya kalmadı. Yeni kurallar beklendiği gibi çalışıyor.</div>`
     : uncertainRows.map((row) => `
       <article class="insight-card">
@@ -308,6 +402,8 @@ async function scanFolder() {
     state.partListBase = clonePartList(Array.isArray(response.partList) ? response.partList : []);
     state.partList = clonePartList(state.partListBase);
     state.scanInsights = response.insights || null;
+    setPaginationPage("workflow", 1);
+    setPaginationPage("parts", 1);
     renderStats(response.summary);
     renderRows(filteredRows());
     renderPartList(filteredPartList());
@@ -328,6 +424,7 @@ async function scanFolder() {
 function resetPartListEdits() {
   state.partList = clonePartList(state.partListBase);
   workflowPartListSearchInput.value = "";
+  setPaginationPage("parts", 1);
   renderPartList(filteredPartList());
   setWorkflowStatus("Parça listesi düzenlemeleri son tarama çıktısına geri alındı.");
 }
@@ -372,6 +469,7 @@ async function handleBulkWorkOrderSubmit(event) {
         code: workflowBulkWorkOrderCodeInput.value.trim(),
         name: workflowBulkWorkOrderNameInput.value.trim(),
         description: workflowBulkWorkOrderDescriptionInput.value.trim(),
+        folderPath: getWorkflowFolder(),
         partList: creatablePartList,
       }),
     });

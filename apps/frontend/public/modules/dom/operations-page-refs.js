@@ -18,4 +18,6 @@ window.operationsPageRefs = {
   get userEmailInput() { return document.getElementById("userEmailInput"); },
   get userDepartmentSelect() { return document.getElementById("userDepartmentSelect"); },
   get userDirectory() { return document.getElementById("userDirectory"); },
+  get operationsDrawer() { return document.getElementById("operationsDrawer"); },
+  get operationsDrawerBackdrop() { return document.getElementById("operationsDrawerBackdrop"); },
 };
