@@ -40,7 +40,7 @@ function renderFileTypeRules() {
   if (state.fileTypeRules.length === 0) {
     rulesFileTypeRulesBody.innerHTML = `
       <tr>
-        <td colspan="5" class="muted">Henüz dosya tipi verisi yüklenmedi veya kayıt bulunmuyor.</td>
+        <td colspan="5" class="muted">Henuz dosya tipi verisi yuklenmedi veya kayit bulunmuyor.</td>
       </tr>
     `;
     return;
@@ -61,7 +61,7 @@ function renderKeywordRules() {
   if (state.keywordRules.length === 0) {
     rulesKeywordRulesBody.innerHTML = `
       <tr>
-        <td colspan="5" class="muted">Henüz keyword verisi yüklenmedi veya kayıt bulunmuyor.</td>
+        <td colspan="5" class="muted">Henuz keyword verisi yuklenmedi veya kayit bulunmuyor.</td>
       </tr>
     `;
     return;
@@ -74,7 +74,7 @@ function renderKeywordRules() {
       <td><input class="inline-input" data-entity="keywordRule" data-index="${index}" data-field="serviceType" value="${escapeAttribute(rule.serviceType)}" /></td>
       <td>
         <select class="inline-input" data-entity="keywordRule" data-index="${index}" data-field="matchTarget">
-          <option value="fileName" ${rule.matchTarget === "fileName" ? "selected" : ""}>Dosya Adı</option>
+          <option value="fileName" ${rule.matchTarget === "fileName" ? "selected" : ""}>Dosya Adi</option>
           <option value="path" ${rule.matchTarget === "path" ? "selected" : ""}>Yol</option>
         </select>
       </td>
@@ -87,7 +87,7 @@ function renderFileNameRules() {
   if (state.fileNameRules.length === 0) {
     rulesFileNameRulesBody.innerHTML = `
       <tr>
-        <td colspan="10" class="muted">Henüz dosya adı kuralı yüklenmedi veya kayıt bulunmuyor.</td>
+        <td colspan="14" class="muted">Henuz dosya adi stratejisi yuklenmedi veya kayit bulunmuyor.</td>
       </tr>
     `;
     return;
@@ -97,27 +97,59 @@ function renderFileNameRules() {
     <tr>
       <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="name" value="${escapeAttribute(rule.name || "")}" /></td>
       <td>
+        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="strategyType">
+          <option value="normalize" ${rule.strategyType === "normalize" ? "selected" : ""}>Normalize</option>
+          <option value="classify" ${rule.strategyType === "classify" ? "selected" : ""}>Siniflandir</option>
+          <option value="route" ${rule.strategyType === "route" ? "selected" : ""}>Yonlendir</option>
+          <option value="hybrid" ${rule.strategyType === "hybrid" ? "selected" : ""}>Karma</option>
+        </select>
+      </td>
+      <td>
         <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternMode">
-          <option value="prefix" ${rule.patternMode === "prefix" ? "selected" : ""}>Ön Ek</option>
+          <option value="prefix" ${rule.patternMode === "prefix" ? "selected" : ""}>On Ek</option>
           <option value="suffix" ${rule.patternMode === "suffix" ? "selected" : ""}>Son Ek</option>
-          <option value="contains" ${rule.patternMode === "contains" ? "selected" : ""}>İçerir</option>
-          <option value="template" ${rule.patternMode === "template" ? "selected" : ""}>Şablon</option>
+          <option value="contains" ${rule.patternMode === "contains" ? "selected" : ""}>Icerir</option>
+          <option value="template" ${rule.patternMode === "template" ? "selected" : ""}>Sablon</option>
           <option value="regex" ${rule.patternMode === "regex" ? "selected" : ""}>Regex</option>
         </select>
       </td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternValue" value="${escapeAttribute(rule.patternValue || "")}" placeholder="Örnek: SA_" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="replacementValue" value="${escapeAttribute(rule.replacementValue || "")}" placeholder="Boş bırakılırsa yakalanan değer kullanılır" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="process" value="${escapeAttribute(rule.process || "")}" placeholder="Opsiyonel süreç" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternValue" value="${escapeAttribute(rule.patternValue || "")}" placeholder="Ornek: SA_" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="replacementValue" value="${escapeAttribute(rule.replacementValue || "")}" placeholder="Bos ise yakalanan deger kullanilir" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="process" value="${escapeAttribute(rule.process || "")}" placeholder="Opsiyonel surec" /></td>
       <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="serviceType" value="${escapeAttribute(rule.serviceType || "")}" placeholder="Opsiyonel hizmet" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="priority" type="number" value="${escapeAttribute(String(rule.priority || 0))}" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="workflowTemplateId" value="${escapeAttribute(rule.workflowTemplateId || "")}" placeholder="template-production-flow" /></td>
       <td>
-        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="applyTo">
-          <option value="fileName" ${rule.applyTo === "fileName" ? "selected" : ""}>Tam Dosya Adı</option>
-          <option value="baseName" ${rule.applyTo === "baseName" ? "selected" : ""}>Uzantısız Ad</option>
+        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="flowGroupMode">
+          <option value="auto" ${rule.flowGroupMode === "auto" ? "selected" : ""}>Otomatik</option>
+          <option value="mainGroup" ${rule.flowGroupMode === "mainGroup" ? "selected" : ""}>Ana Grup</option>
+          <option value="folder" ${rule.flowGroupMode === "folder" ? "selected" : ""}>Klasor</option>
+          <option value="partCode" ${rule.flowGroupMode === "partCode" ? "selected" : ""}>Parca Kodu</option>
+          <option value="fileName" ${rule.flowGroupMode === "fileName" ? "selected" : ""}>Dosya Adi</option>
+          <option value="fixed" ${rule.flowGroupMode === "fixed" ? "selected" : ""}>Sabit</option>
         </select>
       </td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="flowGroupValue" value="${escapeAttribute(rule.flowGroupValue || "")}" placeholder="Sabit grup degeri" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="itemLabelTemplate" value="${escapeAttribute(rule.itemLabelTemplate || "")}" placeholder="{group} / {partCode}" /></td>
+      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="priority" type="number" value="${escapeAttribute(String(rule.priority || 0))}" /></td>
       <td class="boolean-cell"><input type="checkbox" data-entity="fileNameRule" data-index="${index}" data-field="isActive" ${rule.isActive ? "checked" : ""} /></td>
       <td><button class="secondary link-button" data-action="delete-file-name-rule" data-index="${index}">Sil</button></td>
+    </tr>
+    <tr class="sub-row">
+      <td colspan="14">
+        <div class="inline-grid two-columns">
+          <label>
+            Hedef Alan
+            <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="applyTo">
+              <option value="fileName" ${rule.applyTo === "fileName" ? "selected" : ""}>Tam Dosya Adi</option>
+              <option value="baseName" ${rule.applyTo === "baseName" ? "selected" : ""}>Uzantisiz Ad</option>
+            </select>
+          </label>
+          <label>
+            Not
+            <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="note" value="${escapeAttribute(rule.note || "")}" placeholder="Kural amaci ve ornek kullanim" />
+          </label>
+        </div>
+      </td>
     </tr>
   `).join("");
 }
@@ -126,7 +158,7 @@ function renderOverrides() {
   if (state.overrides.length === 0) {
     rulesOverrideRulesBody.innerHTML = `
       <tr>
-        <td colspan="8" class="muted">Henüz override kaydı bulunmuyor.</td>
+        <td colspan="8" class="muted">Henuz override kaydi bulunmuyor.</td>
       </tr>
     `;
     return;
@@ -134,13 +166,13 @@ function renderOverrides() {
 
   rulesOverrideRulesBody.innerHTML = state.overrides.map((override, index) => `
     <tr>
-      <td>${escapeHtml(override.matchMode === "fileName" ? "Dosya Adı" : "Parça Kodu")}</td>
+      <td>${escapeHtml(override.matchMode === "fileName" ? "Dosya Adi" : "Parca Kodu")}</td>
       <td>${escapeHtml(override.matchMode === "fileName" ? override.fileName : override.partCode)}</td>
       <td>${escapeHtml(override.process)}</td>
       <td>${escapeHtml(override.serviceType)}</td>
       <td>${escapeHtml(override.note || "-")}</td>
       <td class="boolean-cell"><input type="checkbox" data-entity="override" data-index="${index}" data-field="isActive" ${override.isActive ? "checked" : ""} /></td>
-      <td><button class="secondary link-button" data-action="edit-override" data-index="${index}">Düzenle</button></td>
+      <td><button class="secondary link-button" data-action="edit-override" data-index="${index}">Duzenle</button></td>
       <td><button class="secondary link-button" data-action="delete-override" data-index="${index}">Sil</button></td>
     </tr>
   `).join("");
@@ -152,7 +184,7 @@ async function saveFileTypeRules() {
     body: JSON.stringify(state.fileTypeRules),
   });
   renderFileTypeRules();
-  rulesStatusText.textContent = "Dosya tipi kuralları kaydedildi.";
+  rulesStatusText.textContent = "Dosya tipi kurallari kaydedildi.";
 }
 
 async function saveKeywordRules() {
@@ -161,7 +193,7 @@ async function saveKeywordRules() {
     body: JSON.stringify(state.keywordRules),
   });
   renderKeywordRules();
-  rulesStatusText.textContent = "Keyword kuralları kaydedildi.";
+  rulesStatusText.textContent = "Keyword kurallari kaydedildi.";
 }
 
 async function saveFileNameRules() {
@@ -170,7 +202,7 @@ async function saveFileNameRules() {
     body: JSON.stringify(state.fileNameRules),
   });
   renderFileNameRules();
-  rulesStatusText.textContent = "Dosya adı kuralları kaydedildi.";
+  rulesStatusText.textContent = "Dosya adi stratejileri kaydedildi.";
 }
 
 async function saveOverrides() {
@@ -182,7 +214,7 @@ async function saveOverrides() {
   state.editingOverrideId = null;
   clearOverrideForm();
   renderOverrides();
-  rulesStatusText.textContent = "Override kuralları kaydedildi.";
+  rulesStatusText.textContent = "Override kurallari kaydedildi.";
 }
 
 function appendNewFileTypeRule() {
@@ -210,15 +242,21 @@ function appendKeywordRule() {
 
 function appendFileNameRule() {
   state.fileNameRules.unshift({
-    id: `file-name-rule-${state.fileNameRules.length + 1}`,
-    name: "Yeni dosya adı kuralı",
+    id: `file-name-rule-${Date.now()}`,
+    name: "Yeni dosya adi stratejisi",
+    strategyType: "normalize",
     patternMode: "prefix",
     patternValue: "",
     replacementValue: "",
     process: "",
     serviceType: "",
+    workflowTemplateId: "",
+    flowGroupMode: "auto",
+    flowGroupValue: "",
+    itemLabelTemplate: "",
     priority: 0,
     applyTo: "fileName",
+    note: "",
     isActive: true,
   });
   renderFileNameRules();
@@ -277,7 +315,7 @@ function hasDraftOverride() {
     || rulesOverrideFileName.value.trim()
     || rulesOverrideProcess.value.trim()
     || rulesOverrideServiceType.value.trim()
-    || rulesOverrideNote.value.trim(),
+    || rulesOverrideNote.value.trim()
   );
 }
 
@@ -296,8 +334,10 @@ function handleTableInput(event) {
     return;
   }
 
-  const collection = entity === "fileTypeRule" ? state.fileTypeRules
-    : entity === "keywordRule" ? state.keywordRules
+  const collection = entity === "fileTypeRule"
+    ? state.fileTypeRules
+    : entity === "keywordRule"
+      ? state.keywordRules
       : state.fileNameRules;
 
   collection[index][field] = target.type === "checkbox" ? target.checked : target.value;
@@ -329,6 +369,16 @@ function handleBodyClick(event) {
     });
     switchPage("rule-overrides");
     navigateToPage("rule-overrides");
+    return;
+  }
+
+  if (actionTarget.dataset.action === "open-scan-model-preview") {
+    openScanModelPreview(getWorkflowFolder(), {
+      partCode: actionTarget.dataset.partCode,
+      fileName: actionTarget.dataset.fileName,
+      effectiveFileName: actionTarget.dataset.effectiveFileName,
+      title: actionTarget.dataset.title,
+    });
     return;
   }
 

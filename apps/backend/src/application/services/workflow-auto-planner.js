@@ -14,17 +14,19 @@ class WorkflowAutoPlanner {
     const grouped = new Map();
 
     for (const row of scanResult.rows) {
-      const templateId = pickTemplateId(row);
+      const route = resolveWorkflowRoute(row);
+      const templateId = route.templateId;
       if (!templateId) {
         continue;
       }
 
-      const key = `${templateId}::${row.mainGroup || row.folder}`;
+      const groupingLabel = route.groupingLabel;
+      const key = `${templateId}::${groupingLabel}`;
       if (!grouped.has(key)) {
         grouped.set(key, {
           templateId,
-          instanceName: `${row.mainGroup || row.folder} - ${templateMap.get(templateId)?.name || row.suggestedProcess}`,
-          itemLabel: row.mainGroup || row.folder,
+          instanceName: buildInstanceName(route, row, templateMap.get(templateId)?.name || row.suggestedProcess),
+          itemLabel: buildItemLabel(route, row),
           itemCount: 0,
           itemPayload: {
             process: row.suggestedProcess,
@@ -32,6 +34,12 @@ class WorkflowAutoPlanner {
             files: [],
             partCodes: [],
             partList: [],
+            routing: {
+              templateId,
+              strategyName: row.routingRule?.name || "",
+              groupMode: row.routingRule?.flowGroupMode || "",
+              groupValue: row.routingRule?.flowGroupValue || "",
+            },
           },
           assignmentSignals: [],
           stepAssignments: [],
@@ -48,7 +56,7 @@ class WorkflowAutoPlanner {
         partCode: row.partCode || "",
         fileName: row.fileName,
         quantity: Number(row.quantity || 1),
-        mainGroup: row.mainGroup || row.folder || "",
+        mainGroup: groupingLabel,
         suggestedProcess: row.suggestedProcess,
         serviceType: row.serviceType,
       });
@@ -67,6 +75,10 @@ class WorkflowAutoPlanner {
 }
 
 function pickTemplateId(row) {
+  if (row.routingRule?.workflowTemplateId) {
+    return row.routingRule.workflowTemplateId;
+  }
+
   if (row.suggestedProcess === "Satin Alma" || String(row.serviceType || "").includes("Tedarigi")) {
     return "template-procurement-flow";
   }
@@ -86,7 +98,66 @@ function pickTemplateId(row) {
   return null;
 }
 
+function resolveWorkflowRoute(row) {
+  const templateId = pickTemplateId(row);
+  return {
+    templateId,
+    groupingLabel: resolveGroupingLabel(row),
+  };
+}
+
+function resolveGroupingLabel(row) {
+  const mode = row.routingRule?.flowGroupMode || "auto";
+  const fixedValue = String(row.routingRule?.flowGroupValue || "").trim();
+
+  if (mode === "fixed" && fixedValue) {
+    return fixedValue;
+  }
+
+  if (mode === "partCode" && row.partCode) {
+    return row.partCode;
+  }
+
+  if (mode === "folder" && row.folder) {
+    return row.folder;
+  }
+
+  if (mode === "fileName" && row.fileName) {
+    return row.fileName;
+  }
+
+  if (mode === "mainGroup" && row.mainGroup) {
+    return row.mainGroup;
+  }
+
+  return row.mainGroup || row.folder || row.partCode || row.fileName || "Genel";
+}
+
+function buildItemLabel(route, row) {
+  const template = String(row.routingRule?.itemLabelTemplate || "").trim();
+  if (!template) {
+    return route.groupingLabel;
+  }
+
+  return applyLabelTemplate(template, row, route.groupingLabel);
+}
+
+function buildInstanceName(route, row, templateName) {
+  const itemLabel = buildItemLabel(route, row);
+  return `${itemLabel} - ${templateName}`;
+}
+
+function applyLabelTemplate(template, row, groupingLabel) {
+  return template
+    .replaceAll("{group}", groupingLabel || "")
+    .replaceAll("{partCode}", row.partCode || "")
+    .replaceAll("{fileName}", row.fileName || "")
+    .replaceAll("{process}", row.suggestedProcess || "")
+    .replaceAll("{serviceType}", row.serviceType || "");
+}
+
 module.exports = {
   WorkflowAutoPlanner,
   pickTemplateId,
+  resolveWorkflowRoute,
 };

@@ -1,6 +1,6 @@
 const { inferMainGroup } = require("../../domain/services/workflow-engine");
 const { parseSolidFileDescriptor } = require("../../domain/services/solid-file-name-parser");
-const { resolveFileNameRule } = require("../../domain/services/file-name-rule-engine");
+const { resolveFileNameStrategy } = require("../../domain/services/file-name-strategy-engine");
 
 class ScanProjectUseCase {
   constructor({
@@ -10,6 +10,7 @@ class ScanProjectUseCase {
     keywordRuleRepository,
     fileNameRuleRepository,
     partOverrideRepository,
+    cadConversionService,
   }) {
     this.projectScanner = projectScanner;
     this.workflowEngine = workflowEngine;
@@ -17,6 +18,7 @@ class ScanProjectUseCase {
     this.keywordRuleRepository = keywordRuleRepository;
     this.fileNameRuleRepository = fileNameRuleRepository;
     this.partOverrideRepository = partOverrideRepository;
+    this.cadConversionService = cadConversionService;
   }
 
   async execute(rootPath) {
@@ -28,8 +30,9 @@ class ScanProjectUseCase {
     ]);
 
     const scannedFiles = await this.projectScanner.scan(rootPath, fileTypeRules);
+    this.scheduleCadConversions(rootPath, scannedFiles);
     const rows = scannedFiles.map((fileDescriptor) => {
-      const fileNameRuleMatch = resolveFileNameRule(fileDescriptor, fileNameRules);
+      const fileNameRuleMatch = resolveFileNameStrategy(fileDescriptor, fileNameRules);
       const effectiveDescriptor = {
         ...fileDescriptor,
         fileName: fileNameRuleMatch.effectiveFileName || fileDescriptor.fileName,
@@ -69,11 +72,19 @@ class ScanProjectUseCase {
         isMirrored: parsedName.isMirrored,
         materialHints: parsedName.materialHints,
         processHints: parsedName.processHints,
+        routingRule: fileNameRuleMatch.routingRule ? {
+          name: fileNameRuleMatch.routingRule.name,
+          workflowTemplateId: fileNameRuleMatch.routingRule.workflowTemplateId,
+          flowGroupMode: fileNameRuleMatch.routingRule.flowGroupMode,
+          flowGroupValue: fileNameRuleMatch.routingRule.flowGroupValue,
+          itemLabelTemplate: fileNameRuleMatch.routingRule.itemLabelTemplate,
+        } : null,
         fileNameRule: fileNameRuleMatch.matched ? {
           name: fileNameRuleMatch.rule.name,
           explanation: fileNameRuleMatch.explanation,
           transformedValue: fileNameRuleMatch.transformedValue,
           effectiveFileName: fileNameRuleMatch.effectiveFileName,
+          matchedRuleCount: fileNameRuleMatch.matchedRules.length,
         } : null,
       };
     });
@@ -85,6 +96,16 @@ class ScanProjectUseCase {
       partList: buildPartList(rows),
       rows,
     };
+  }
+
+  scheduleCadConversions(rootPath, scannedFiles) {
+    if (!this.cadConversionService) {
+      return;
+    }
+
+    try {
+      this.cadConversionService.scheduleMissingConversions(rootPath, scannedFiles);
+    } catch (error) {}
   }
 }
 
@@ -110,6 +131,7 @@ function buildSummary(rows) {
 function buildInsights(rows) {
   const matchedBy = {};
   const fileNameRuleHits = {};
+  const routingRuleHits = {};
   const confidenceCounts = {};
 
   for (const row of rows) {
@@ -118,6 +140,10 @@ function buildInsights(rows) {
 
     if (row.fileNameRule?.name) {
       fileNameRuleHits[row.fileNameRule.name] = (fileNameRuleHits[row.fileNameRule.name] || 0) + 1;
+    }
+
+    if (row.routingRule?.name) {
+      routingRuleHits[row.routingRule.name] = (routingRuleHits[row.routingRule.name] || 0) + 1;
     }
   }
 
@@ -133,6 +159,7 @@ function buildInsights(rows) {
     matchedBy,
     confidenceCounts,
     fileNameRuleHits,
+    routingRuleHits,
     uncertainRows: rows
       .filter((row) => row.confidence === "Belirsiz")
       .slice(0, 25)

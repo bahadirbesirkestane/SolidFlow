@@ -145,7 +145,7 @@ class WorkflowEngine {
   }
 
   matchFileNameRuleClassification(fileDescriptor) {
-    const rule = fileDescriptor.fileNameRuleMatch?.rule;
+    const rule = fileDescriptor.fileNameRuleMatch?.classificationRule;
     if (!rule) {
       return null;
     }

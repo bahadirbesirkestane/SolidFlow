@@ -3,12 +3,15 @@ const path = require("path");
 
 function migrateAndSeedDatabase({ db, rootPath }) {
   createTables(db);
+  ensureProjectFolderColumn(db);
+  ensureFileNameRuleColumns(db);
   seedTableIfEmpty({
     db,
     tableName: "file_type_rules",
     readSeed: () => readSeedFile(rootPath, "file-type-rules.json"),
     insertMany: (rows) => insertFileTypeRules(db, rows),
   });
+  ensureFileTypeRules(db, rootPath);
   seedTableIfEmpty({
     db,
     tableName: "keyword_rules",
@@ -60,6 +63,7 @@ function createTables(db) {
     CREATE TABLE IF NOT EXISTS file_name_rules (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      strategy_type TEXT NOT NULL DEFAULT 'normalize',
       pattern_mode TEXT NOT NULL,
       pattern_value TEXT NOT NULL,
       replacement_value TEXT,
@@ -68,6 +72,10 @@ function createTables(db) {
       priority INTEGER NOT NULL DEFAULT 0,
       apply_to TEXT NOT NULL DEFAULT 'fileName',
       note TEXT,
+      workflow_template_id TEXT,
+      flow_group_mode TEXT NOT NULL DEFAULT 'auto',
+      flow_group_value TEXT,
+      item_label_template TEXT,
       is_active INTEGER NOT NULL DEFAULT 1
     );
 
@@ -122,6 +130,7 @@ function createTables(db) {
       code TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       description TEXT,
+      folder_path TEXT,
       status TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -237,6 +246,23 @@ function insertFileTypeRules(db, rows) {
   });
 }
 
+function ensureFileTypeRules(db, rootPath) {
+  const seedRows = readSeedFile(rootPath, "file-type-rules.json");
+  if (!Array.isArray(seedRows) || seedRows.length === 0) {
+    return;
+  }
+
+  const existingExtensions = new Set(
+    db.prepare("SELECT extension FROM file_type_rules").all().map((row) => row.extension),
+  );
+  const missingRows = seedRows.filter((row) => !existingExtensions.has(row.extension));
+  if (missingRows.length === 0) {
+    return;
+  }
+
+  insertFileTypeRules(db, missingRows);
+}
+
 function insertKeywordRules(db, rows) {
   const statement = db.prepare(`
     INSERT INTO keyword_rules (id, keyword, process, service_type, match_target, is_active)
@@ -282,6 +308,7 @@ function insertFileNameRules(db, rows) {
     INSERT INTO file_name_rules (
       id,
       name,
+      strategy_type,
       pattern_mode,
       pattern_value,
       replacement_value,
@@ -290,15 +317,20 @@ function insertFileNameRules(db, rows) {
       priority,
       apply_to,
       note,
+      workflow_template_id,
+      flow_group_mode,
+      flow_group_value,
+      item_label_template,
       is_active
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   runInTransaction(db, () => {
     for (const row of rows) {
       statement.run(
         row.id,
         row.name,
+        row.strategyType || "normalize",
         row.patternMode,
         row.patternValue,
         row.replacementValue || "",
@@ -307,6 +339,10 @@ function insertFileNameRules(db, rows) {
         Number(row.priority || 0),
         row.applyTo || "fileName",
         row.note || "",
+        row.workflowTemplateId || "",
+        row.flowGroupMode || "auto",
+        row.flowGroupValue || "",
+        row.itemLabelTemplate || "",
         row.isActive ? 1 : 0,
       );
     }
@@ -319,15 +355,59 @@ function ensureFileNameRules(db, rootPath) {
     return;
   }
 
-  const existingIds = new Set(
-    db.prepare("SELECT id FROM file_name_rules").all().map((row) => row.id),
-  );
+  const existingRows = db.prepare(`
+    SELECT
+      id,
+      strategy_type,
+      workflow_template_id,
+      flow_group_mode,
+      flow_group_value,
+      item_label_template
+    FROM file_name_rules
+  `).all();
+  const existingIds = new Set(existingRows.map((row) => row.id));
   const missingRows = seedRows.filter((row) => !existingIds.has(row.id));
-  if (missingRows.length === 0) {
-    return;
+  if (missingRows.length > 0) {
+    insertFileNameRules(db, missingRows);
   }
 
-  insertFileNameRules(db, missingRows);
+  const existingById = new Map(existingRows.map((row) => [row.id, row]));
+  const updateStatement = db.prepare(`
+    UPDATE file_name_rules
+    SET
+      strategy_type = ?,
+      workflow_template_id = ?,
+      flow_group_mode = ?,
+      flow_group_value = ?,
+      item_label_template = ?
+    WHERE id = ?
+  `);
+
+  runInTransaction(db, () => {
+    for (const seedRow of seedRows) {
+      const currentRow = existingById.get(seedRow.id);
+      if (!currentRow) {
+        continue;
+      }
+
+      const shouldBackfill = !String(currentRow.workflow_template_id || "").trim()
+        && !String(currentRow.item_label_template || "").trim()
+        && (!String(currentRow.strategy_type || "").trim() || currentRow.strategy_type === "normalize");
+
+      if (!shouldBackfill) {
+        continue;
+      }
+
+      updateStatement.run(
+        seedRow.strategyType || "normalize",
+        seedRow.workflowTemplateId || "",
+        seedRow.flowGroupMode || "auto",
+        seedRow.flowGroupValue || "",
+        seedRow.itemLabelTemplate || "",
+        seedRow.id,
+      );
+    }
+  });
 }
 
 function insertWorkflowTemplates(db, rows) {
@@ -379,6 +459,32 @@ function ensureWorkflowTemplates(db, rootPath) {
   }
 
   insertWorkflowTemplates(db, missingRows);
+}
+
+function ensureProjectFolderColumn(db) {
+  const columns = db.prepare("PRAGMA table_info(projects)").all();
+  const hasFolderPath = columns.some((column) => column.name === "folder_path");
+  if (hasFolderPath) {
+    return;
+  }
+
+  db.exec("ALTER TABLE projects ADD COLUMN folder_path TEXT");
+}
+
+function ensureFileNameRuleColumns(db) {
+  const columns = db.prepare("PRAGMA table_info(file_name_rules)").all();
+  const existingColumnNames = new Set(columns.map((column) => column.name));
+  const missingColumns = [
+    ["strategy_type", "TEXT NOT NULL DEFAULT 'normalize'"],
+    ["workflow_template_id", "TEXT"],
+    ["flow_group_mode", "TEXT NOT NULL DEFAULT 'auto'"],
+    ["flow_group_value", "TEXT"],
+    ["item_label_template", "TEXT"],
+  ].filter(([name]) => !existingColumnNames.has(name));
+
+  for (const [name, definition] of missingColumns) {
+    db.exec(`ALTER TABLE file_name_rules ADD COLUMN ${name} ${definition}`);
+  }
 }
 
 function seedDepartmentsAndUsersIfEmpty(db, rootPath) {

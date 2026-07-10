@@ -1,14 +1,14 @@
 window.APP_PAGE_TEMPLATES = window.APP_PAGE_TEMPLATES || {};
 
 window.APP_PAGE_TEMPLATES["rule-file-types"] = `
-  <section class="panel page-shell">
+  <section class="panel page-shell table-page-shell">
     <div class="page-section-intro">
       <div>
-        <h2>Dosya Tipi Kuralları</h2>
-        <p class="muted">Uzantı bazlı varsayılan süreç ve hizmet tanımlarını yönet.</p>
+        <h2>Dosya Tipi Kurallari</h2>
+        <p class="muted">Uzanti bazli varsayilan surec ve hizmet tanimlarini yonet.</p>
       </div>
       <div class="inline-actions">
-        <button id="addFileTypeRuleButton" class="secondary">Yeni Satır</button>
+        <button id="addFileTypeRuleButton" class="secondary">Yeni Satir</button>
         <button id="refreshFileTypeRulesButton" class="secondary">Yenile</button>
         <button id="resetFileTypeRulesButton" class="secondary">Temizle</button>
         <button id="saveFileTypeRulesButton">Kaydet</button>
@@ -18,10 +18,10 @@ window.APP_PAGE_TEMPLATES["rule-file-types"] = `
       <table>
         <thead>
           <tr>
-            <th>Uzantı</th>
-            <th>Görünen Ad</th>
-            <th>Varsayılan Süreç</th>
-            <th>Varsayılan Hizmet</th>
+            <th>Uzanti</th>
+            <th>Gorunen Ad</th>
+            <th>Varsayilan Surec</th>
+            <th>Varsayilan Hizmet</th>
             <th>Aktif</th>
           </tr>
         </thead>
@@ -32,11 +32,11 @@ window.APP_PAGE_TEMPLATES["rule-file-types"] = `
 `;
 
 window.APP_PAGE_TEMPLATES["rule-keywords"] = `
-  <section class="panel page-shell">
+  <section class="panel page-shell table-page-shell">
     <div class="page-section-intro">
       <div>
-        <h2>Keyword Kuralları</h2>
-        <p class="muted">Belirsiz kalan dosyaları keyword bazlı süreç ve hizmet atamalarıyla zenginleştir.</p>
+        <h2>Keyword Kurallari</h2>
+        <p class="muted">Belirsiz kalan dosyalari keyword bazli surec ve hizmet atamalariyla zenginlestir.</p>
       </div>
       <div class="inline-actions">
         <button id="addKeywordRuleButton" class="secondary">Yeni Kural</button>
@@ -50,7 +50,7 @@ window.APP_PAGE_TEMPLATES["rule-keywords"] = `
         <thead>
           <tr>
             <th>Keyword</th>
-            <th>Süreç</th>
+            <th>Surec</th>
             <th>Hizmet</th>
             <th>Hedef</th>
             <th>Aktif</th>
@@ -63,14 +63,14 @@ window.APP_PAGE_TEMPLATES["rule-keywords"] = `
 `;
 
 window.APP_PAGE_TEMPLATES["rule-file-names"] = `
-  <section class="panel page-shell">
+  <section class="panel page-shell table-page-shell">
     <div class="page-section-intro">
       <div>
-        <h2>Dosya Adı Kuralları</h2>
-        <p class="muted">Önek, sonek, içerik veya desen bazlı isim çıkarımı yap ve özel yönlendirmeler tanımla.</p>
+        <h2>Dosya Adi Stratejileri</h2>
+        <p class="muted">Dosya adi okuma, isim normalize etme, surec atama ve workflow yonlendirme kararlarini tek yerden yonet.</p>
       </div>
       <div class="inline-actions">
-        <button id="addFileNameRuleButton" class="secondary">Yeni Kural</button>
+        <button id="addFileNameRuleButton" class="secondary">Yeni Strateji</button>
         <button id="refreshFileNameRulesButton" class="secondary">Yenile</button>
         <button id="resetFileNameRulesButton" class="secondary">Temizle</button>
         <button id="saveFileNameRulesButton">Kaydet</button>
@@ -79,12 +79,12 @@ window.APP_PAGE_TEMPLATES["rule-file-names"] = `
 
     <div class="rules-callout-grid">
       <article class="placeholder-card">
-        <h3>Hazır Örnekler</h3>
-        <p class="muted">"SA_&lt;dosya&gt;", "PRJ-&lt;dosya&gt;", "&lt;dosya&gt;_REV", "KESIM_&lt;dosya&gt;" gibi kurallarla isimden yeni anlam üret.</p>
+        <h3>Merkezi Yonetim</h3>
+        <p class="muted">Dosya isimlerini yorumlama yaklasimi, surec atamalari ve veri akisi yonlendirmeleri ayni tabloda tutulur.</p>
       </article>
       <article class="placeholder-card">
-        <h3>Hedef</h3>
-        <p class="muted">Veritabanındaki gerçek dosya adını bozmadan, eşleşen dosyaları farklı süreçlere ve şablonlara yönlendir.</p>
+        <h3>Bir Sonraki Adim Hazir</h3>
+        <p class="muted">Workflow template, grup mantigi ve etiket sablonu alanlari; dosya adina gore otomatik veri akisi uretiminin temelini hazirlar.</p>
       </article>
     </div>
 
@@ -92,14 +92,18 @@ window.APP_PAGE_TEMPLATES["rule-file-names"] = `
       <table>
         <thead>
           <tr>
-            <th>Kural Adı</th>
-            <th>Eşleme Türü</th>
+            <th>Kural Adi</th>
+            <th>Strateji</th>
+            <th>Esleme</th>
             <th>Desen</th>
-            <th>Dönüşüm</th>
-            <th>Süreç</th>
+            <th>Donusum</th>
+            <th>Surec</th>
             <th>Hizmet</th>
-            <th>Öncelik</th>
-            <th>Hedef</th>
+            <th>Workflow</th>
+            <th>Grup Modu</th>
+            <th>Grup Degeri</th>
+            <th>Etiket Sablonu</th>
+            <th>Oncelik</th>
             <th>Aktif</th>
             <th>Sil</th>
           </tr>
@@ -111,11 +115,11 @@ window.APP_PAGE_TEMPLATES["rule-file-names"] = `
 `;
 
 window.APP_PAGE_TEMPLATES["rule-overrides"] = `
-  <section class="panel page-shell">
+  <section class="panel page-shell table-page-shell">
     <div class="page-section-intro">
       <div>
-        <h2>Parça Override Kuralları</h2>
-        <p class="muted">Belirli parça kodu veya dosya adına özel kesin süreç ve hizmet yönlendirmeleri tanımla.</p>
+        <h2>Parca Override Kurallari</h2>
+        <p class="muted">Belirli parca kodu veya dosya adina ozel kesin surec ve hizmet yonlendirmeleri tanimla.</p>
       </div>
       <div class="inline-actions">
         <button id="resetOverridesButton" class="secondary">Temizle</button>
@@ -125,31 +129,31 @@ window.APP_PAGE_TEMPLATES["rule-overrides"] = `
 
     <form id="overrideForm" class="override-form">
       <label>
-        Eşleşme Türü
+        Eslesme Turu
         <select id="overrideMatchMode">
-          <option value="partCode">Parça Kodu</option>
-          <option value="fileName">Dosya Adı</option>
+          <option value="partCode">Parca Kodu</option>
+          <option value="fileName">Dosya Adi</option>
         </select>
       </label>
       <label>
-        Parça Kodu
-        <input id="overridePartCode" type="text" placeholder="Örnek: 650" />
+        Parca Kodu
+        <input id="overridePartCode" type="text" placeholder="Ornek: 650" />
       </label>
       <label>
-        Dosya Adı
-        <input id="overrideFileName" type="text" placeholder="Örnek: 650_BANT.SLDPRT" />
+        Dosya Adi
+        <input id="overrideFileName" type="text" placeholder="Ornek: 650_BANT.SLDPRT" />
       </label>
       <label>
-        Süreç
-        <input id="overrideProcess" type="text" placeholder="Örnek: Satın Alma" />
+        Surec
+        <input id="overrideProcess" type="text" placeholder="Ornek: Satin Alma" />
       </label>
       <label>
         Hizmet
-        <input id="overrideServiceType" type="text" placeholder="Örnek: Malzeme Tedarği" />
+        <input id="overrideServiceType" type="text" placeholder="Ornek: Malzeme Tedarigi" />
       </label>
       <label class="wide">
         Not
-        <input id="overrideNote" type="text" placeholder="Bu parçayı her zaman dış hizmete yönlendir" />
+        <input id="overrideNote" type="text" placeholder="Bu parcayi her zaman dis hizmete yonlendir" />
       </label>
       <div class="form-actions">
         <button type="submit">Listeye Ekle</button>
@@ -161,13 +165,13 @@ window.APP_PAGE_TEMPLATES["rule-overrides"] = `
       <table>
         <thead>
           <tr>
-            <th>Eşleşme</th>
-            <th>Değer</th>
-            <th>Süreç</th>
+            <th>Eslesme</th>
+            <th>Deger</th>
+            <th>Surec</th>
             <th>Hizmet</th>
             <th>Not</th>
             <th>Aktif</th>
-            <th>Düzenle</th>
+            <th>Duzenle</th>
             <th>Sil</th>
           </tr>
         </thead>
