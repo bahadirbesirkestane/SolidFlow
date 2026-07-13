@@ -87,6 +87,14 @@ function resolveAllowedRoles(method, pathname) {
     return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
   }
 
+  if (pathname.startsWith("/api/operations/workflow-instances/") && method === "DELETE") {
+    return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
+  }
+
+  if (pathname.startsWith("/api/operations/workflow-instance-steps/") && method === "PATCH") {
+    return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
+  }
+
   return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER, AUTH_ROLES.WORKER];
 }
 

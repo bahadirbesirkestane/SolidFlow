@@ -566,6 +566,38 @@ select {
   text-align: left;
 }
 
+.workflow-list-row {
+  cursor: pointer;
+}
+
+.workflow-list-row:hover {
+  background: var(--surface-soft);
+}
+
+.workflow-list-row.is-selected {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.table-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button {
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.icon-button--danger {
+  color: var(--danger);
+}
+
 .rules-shell,
 .rules-two-column,
 .rules-three-column,

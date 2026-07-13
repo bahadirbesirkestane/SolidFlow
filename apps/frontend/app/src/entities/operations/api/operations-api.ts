@@ -83,6 +83,8 @@ export type WorkflowStep = {
   updatedAt?: string;
 };
 
+export type WorkflowStepStatus = "pending" | "ready" | "in_progress" | "completed" | "skipped";
+
 export type WorkflowInstance = {
   id: string;
   projectId?: string;
@@ -110,6 +112,7 @@ export type AuditEvent = {
   id: string;
   action: string;
   entityType: string;
+  entityId: string;
   actorUserId?: string;
   createdAt: string;
 };
@@ -206,5 +209,28 @@ export function advanceWorkflowInstance(
   return apiRequest<WorkflowInstance>(`/api/operations/workflow-instances/${encodeURIComponent(instanceId)}/advance`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function updateWorkflowStep(
+  stepId: string,
+  payload: {
+    name?: string;
+    description?: string;
+    assigneeIds?: string[];
+    status?: WorkflowStepStatus;
+    note?: string;
+    reassignmentReason?: string;
+  },
+) {
+  return apiRequest<WorkflowInstance>(`/api/operations/workflow-instance-steps/${encodeURIComponent(stepId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteWorkflowInstance(instanceId: string) {
+  return apiRequest<WorkflowInstance>(`/api/operations/workflow-instances/${encodeURIComponent(instanceId)}`, {
+    method: "DELETE",
   });
 }

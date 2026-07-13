@@ -1,12 +1,14 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useOperationsPageData } from "@/entities/operations/hooks/useOperationsPageData";
+import { deleteWorkflowInstance, updateWorkflowStep, type WorkflowInstance } from "@/entities/operations/api/operations-api";
 import { DrawerPanel } from "@/shared/ui/DrawerPanel";
 import { FormField } from "@/shared/ui/FormField";
 import { PageShell } from "@/shared/ui/PageShell";
 import { SectionCard } from "@/shared/ui/SectionCard";
 import { SplitLayout } from "@/shared/ui/SplitLayout";
 import { StatusBanner } from "@/shared/ui/StatusBanner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   dateStyle: "short",
@@ -26,7 +28,32 @@ function formatDateTime(value?: string) {
   return dateFormatter.format(date);
 }
 
+function formatWorkflowStatus(value?: string) {
+  if (!value) {
+    return "Durum yok";
+  }
+
+  if (value === "pending") {
+    return "Beklemede";
+  }
+  if (value === "ready") {
+    return "Hazir";
+  }
+  if (value === "in_progress") {
+    return "Islemde";
+  }
+  if (value === "completed") {
+    return "Tamamlandi";
+  }
+  if (value === "skipped") {
+    return "Atlandi";
+  }
+
+  return value;
+}
+
 export function OperationsCenterPage() {
+  const queryClient = useQueryClient();
   const {
     activeUsers,
     auditEvents,
@@ -46,6 +73,12 @@ export function OperationsCenterPage() {
     workspaceMetrics,
   } = useOperationsPageData();
   const [drawerMode, setDrawerMode] = useState<"jobs" | "audit" | null>(null);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
+  const [workflowEditor, setWorkflowEditor] = useState({
+    status: "ready",
+    note: "",
+    assigneeIds: [] as string[],
+  });
   const [projectForm, setProjectForm] = useState({
     code: "",
     name: "",
@@ -63,6 +96,54 @@ export function OperationsCenterPage() {
 
   const recentJobs = useMemo(() => projectOpenJobs.slice(0, 5), [projectOpenJobs]);
   const recentAuditEvents = useMemo(() => auditEvents.slice(0, 6), [auditEvents]);
+  const workflows = projectDashboardQuery.data?.workflows || [];
+  const selectedWorkflow = workflows.find((workflow) => workflow.id === selectedWorkflowId) || null;
+  const selectedWorkflowCurrentStep = selectedWorkflow?.currentStep || null;
+  const workflowAuditEvents = useMemo(() => {
+    if (!selectedWorkflow) {
+      return [];
+    }
+
+    const stepIds = new Set(selectedWorkflow.steps.map((step) => step.id));
+    return auditEvents.filter((event) =>
+      (event.entityType === "workflow_instance" && event.entityId === selectedWorkflow.id)
+      || (event.entityType === "workflow_step" && stepIds.has(event.entityId)),
+    );
+  }, [auditEvents, selectedWorkflow]);
+
+  const updateWorkflowMutation = useMutation({
+    mutationFn: ({
+      stepId,
+      payload,
+    }: {
+      stepId: string;
+      payload: {
+        status: "pending" | "ready" | "in_progress" | "completed" | "skipped";
+        note: string;
+        assigneeIds: string[];
+        reassignmentReason?: string;
+      };
+    }) => updateWorkflowStep(stepId, payload),
+    onSuccess: async (updatedWorkflow) => {
+      setSelectedWorkflowId(updatedWorkflow.id);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["operations", "projectDashboard", effectiveProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["operations", "projectAudit", effectiveProjectId] }),
+      ]);
+    },
+  });
+
+  const deleteWorkflowMutation = useMutation({
+    mutationFn: deleteWorkflowInstance,
+    onSuccess: async () => {
+      setSelectedWorkflowId("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["operations", "projectDashboard", effectiveProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["operations", "projectAudit", effectiveProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["operations", "openJobs"] }),
+      ]);
+    },
+  });
 
   async function handleProjectSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,6 +158,32 @@ export function OperationsCenterPage() {
       name: "",
       description: "",
       autoGenerateFromFolder: "",
+    });
+  }
+
+  function openWorkflowDetail(workflow: WorkflowInstance) {
+    setSelectedWorkflowId(workflow.id);
+    setWorkflowEditor({
+      status: workflow.currentStep?.status || "ready",
+      note: workflow.currentStep?.completionNote || "",
+      assigneeIds: workflow.currentStep?.assigneeIds || [],
+    });
+  }
+
+  async function handleWorkflowSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedWorkflowCurrentStep) {
+      return;
+    }
+
+    await updateWorkflowMutation.mutateAsync({
+      stepId: selectedWorkflowCurrentStep.id,
+      payload: {
+        status: workflowEditor.status as "pending" | "ready" | "in_progress" | "completed" | "skipped",
+        note: workflowEditor.note.trim(),
+        assigneeIds: workflowEditor.assigneeIds,
+        reassignmentReason: "Operasyon merkezi duzenlemesi",
+      },
     });
   }
 
@@ -346,33 +453,70 @@ export function OperationsCenterPage() {
                         </div>
                       </div>
 
-                      <div className="workflow-summary-grid">
-                        {projectDashboardQuery.data.workflows.map((workflow) => (
-                          <article key={workflow.id} className="workflow-card">
-                            <div className="workflow-card__head">
-                              <strong>{workflow.name}</strong>
-                              <span>%{workflow.progressPercent}</span>
-                            </div>
-                            <p>{workflow.itemLabel || workflow.templateName || "Genel akis"}</p>
-                            <small>{workflow.steps.length} adim</small>
-                            <div className="progress-bar">
-                              <span style={{ width: `${workflow.progressPercent}%` }} />
-                            </div>
-                            <div className="workflow-card__current">
-                              <span>Siradaki adim</span>
-                              <strong>{workflow.currentStep?.name || "Tum adimlar tamamlandi"}</strong>
-                              <small>
-                                {workflow.currentStep?.assigneeIds.length
-                                  ? `${workflow.currentStep.assigneeIds.length} atama`
-                                  : "Atama beklenmiyor"}
-                              </small>
-                            </div>
-                          </article>
-                        ))}
-                        {projectDashboardQuery.data.workflows.length === 0 ? (
-                          <div className="empty-state">Bu projede henuz workflow yok.</div>
-                        ) : null}
-                      </div>
+                      {workflows.length > 0 ? (
+                        <div className="data-table">
+                          <table className="workflow-list-table">
+                            <thead>
+                              <tr>
+                                <th>Is</th>
+                                <th>Kalem</th>
+                                <th>Siradaki Adim</th>
+                                <th>Sorumlu</th>
+                                <th>Durum</th>
+                                <th>Ilerleme</th>
+                                <th>Aksiyon</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {workflows.map((workflow) => {
+                                const currentStep = workflow.currentStep;
+                                const assigneeNames = (currentStep?.assigneeIds || [])
+                                  .map((userId) => activeUsers.find((user) => user.id === userId)?.fullName || userId)
+                                  .join(", ");
+                                return (
+                                  <tr
+                                    key={workflow.id}
+                                    className={`workflow-list-row${workflow.id === selectedWorkflowId ? " is-selected" : ""}`}
+                                    onClick={() => openWorkflowDetail(workflow)}
+                                  >
+                                    <td>
+                                      <strong>{workflow.name}</strong>
+                                      <div>{workflow.templateName || "Workflow"}</div>
+                                    </td>
+                                    <td>{workflow.itemLabel || "Genel akis"}</td>
+                                    <td>{currentStep?.name || "Tum adimlar tamamlandi"}</td>
+                                    <td>{assigneeNames || "Atama beklenmiyor"}</td>
+                                    <td>{formatWorkflowStatus(currentStep?.status || workflow.status)}</td>
+                                    <td>%{workflow.progressPercent}</td>
+                                    <td>
+                                      <div className="table-action-row" onClick={(event) => event.stopPropagation()}>
+                                        <button type="button" className="icon-button" title="Duzenle" onClick={() => openWorkflowDetail(workflow)}>
+                                          ✎
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="icon-button icon-button--danger"
+                                          title="Sil"
+                                          onClick={() => {
+                                            if (window.confirm(`${workflow.name} silinsin mi?`)) {
+                                              deleteWorkflowMutation.mutate(workflow.id);
+                                            }
+                                          }}
+                                          disabled={deleteWorkflowMutation.isPending}
+                                        >
+                                          🗑
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="empty-state">Bu projede henuz workflow yok.</div>
+                      )}
                     </section>
 
                     <section className="workspace-panel">
@@ -503,6 +647,126 @@ export function OperationsCenterPage() {
             ) : null}
           </div>
         )}
+      </DrawerPanel>
+
+      <DrawerPanel
+        open={Boolean(selectedWorkflow)}
+        title={selectedWorkflow ? `${selectedWorkflow.name} Detayi` : "Workflow Detayi"}
+        onClose={() => setSelectedWorkflowId("")}
+      >
+        {selectedWorkflow ? (
+          <div className="stack-list">
+            <article className="simple-list-card">
+              <div className="inline-meta">
+                <strong>{selectedWorkflow.itemLabel || selectedWorkflow.name}</strong>
+                <span>%{selectedWorkflow.progressPercent}</span>
+              </div>
+              <p>{selectedWorkflow.templateName || "Workflow"}</p>
+              <small>{selectedWorkflow.steps.length} adim</small>
+            </article>
+
+            <article className="workspace-panel">
+              <div className="workspace-panel__header">
+                <div>
+                  <h3>Surec Dagilimi</h3>
+                  <p>Satira tiklanan isin adimlari ve kullanici dagilimi</p>
+                </div>
+              </div>
+              <div className="stack-list stack-list--compact">
+                {selectedWorkflow.steps.map((step) => {
+                  const assigneeNames = step.assigneeIds
+                    .map((userId) => activeUsers.find((user) => user.id === userId)?.fullName || userId)
+                    .join(", ");
+                  return (
+                    <article key={step.id} className="simple-list-card">
+                      <div className="inline-meta">
+                        <strong>{step.sequenceNo}. {step.name}</strong>
+                        <span>{formatWorkflowStatus(step.status)}</span>
+                      </div>
+                      <p>{step.description || "Aciklama girilmemis."}</p>
+                      <small>{assigneeNames || step.assignee || "Atama yok"}</small>
+                    </article>
+                  );
+                })}
+              </div>
+            </article>
+
+            {selectedWorkflowCurrentStep ? (
+              <article className="workspace-panel">
+                <div className="workspace-panel__header">
+                  <div>
+                    <h3>Duzenle</h3>
+                    <p>Mevcut adimin durumunu, notunu ve sorumlularini guncelle</p>
+                  </div>
+                </div>
+                <form className="form-grid" onSubmit={handleWorkflowSave}>
+                  <FormField label="Durum">
+                    <select
+                      value={workflowEditor.status}
+                      onChange={(event) => setWorkflowEditor((current) => ({ ...current, status: event.target.value }))}
+                    >
+                      <option value="pending">Beklemede</option>
+                      <option value="ready">Hazir</option>
+                      <option value="in_progress">Islemde</option>
+                      <option value="completed">Tamamlandi</option>
+                      <option value="skipped">Atlandi</option>
+                    </select>
+                  </FormField>
+                  <FormField label="Not">
+                    <input
+                      value={workflowEditor.note}
+                      onChange={(event) => setWorkflowEditor((current) => ({ ...current, note: event.target.value }))}
+                      placeholder="Operasyon notu"
+                    />
+                  </FormField>
+                  <FormField label="Sorumlular">
+                    <select
+                      multiple
+                      size={5}
+                      value={workflowEditor.assigneeIds}
+                      onChange={(event) => {
+                        const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                        setWorkflowEditor((current) => ({ ...current, assigneeIds: values }));
+                      }}
+                    >
+                      {activeUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <div className="form-actions">
+                    <button type="submit" disabled={updateWorkflowMutation.isPending}>
+                      {updateWorkflowMutation.isPending ? "Kaydediliyor..." : "Degisikligi Kaydet"}
+                    </button>
+                  </div>
+                </form>
+              </article>
+            ) : null}
+
+            <article className="workspace-panel">
+              <div className="workspace-panel__header">
+                <div>
+                  <h3>Ilgili Audit</h3>
+                  <p>Secili is icin son hareketler</p>
+                </div>
+              </div>
+              <div className="stack-list stack-list--compact">
+                {workflowAuditEvents.map((event) => (
+                  <article key={event.id} className="simple-list-card">
+                    <strong>{event.action}</strong>
+                    <p>{event.entityType}</p>
+                    <small>{formatDateTime(event.createdAt)}</small>
+                  </article>
+                ))}
+                {workflowAuditEvents.length === 0 ? (
+                  <div className="empty-state">Bu is icin audit kaydi bulunmuyor.</div>
+                ) : null}
+              </div>
+            </article>
+          </div>
+        ) : null}
       </DrawerPanel>
     </PageShell>
   );
