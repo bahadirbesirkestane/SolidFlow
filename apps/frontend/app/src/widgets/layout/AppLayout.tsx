@@ -1,13 +1,31 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { appRoutes } from "@/app/routes/page-config";
 import { groupRoutesBySection } from "@/app/routes/route-groups";
+import { logout } from "@/entities/auth/api/auth-api";
+import { useAuthSession } from "@/entities/auth/hooks/useAuthSession";
 import { useFrontendShellConfig } from "@/entities/system/hooks/useFrontendShellConfig";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function AppLayout() {
   const location = useLocation();
-  const currentRoute = appRoutes.find((route) => location.pathname === route.path) || appRoutes[0];
-  const sections = groupRoutesBySection(appRoutes);
+  const queryClient = useQueryClient();
+  const authQuery = useAuthSession();
+  const availableRoutes = appRoutes.filter((route) => {
+    if (!authQuery.data?.role || !route.allowedRoles || route.allowedRoles.length === 0) {
+      return true;
+    }
+
+    return route.allowedRoles.includes(authQuery.data.role);
+  });
+  const currentRoute = availableRoutes.find((route) => location.pathname === route.path) || availableRoutes[0] || appRoutes[0];
+  const sections = groupRoutesBySection(availableRoutes);
   const shellConfigQuery = useFrontendShellConfig();
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["auth", "session"] });
+    },
+  });
   const shellStateLabel = shellConfigQuery.isLoading
     ? "Shell config yukleniyor"
     : shellConfigQuery.isError
@@ -23,7 +41,7 @@ export function AppLayout() {
           <div className="brand-mark">SF</div>
           <div>
             <strong>SolidFlow</strong>
-            <p>New architecture shell</p>
+            <p>Guvenli yeni shell</p>
           </div>
         </div>
         <nav className="sidebar-nav">
@@ -54,9 +72,14 @@ export function AppLayout() {
             <strong>{currentRoute.title}</strong>
           </div>
           <div className="topbar__chips">
+            <span>{authQuery.data?.fullName || "Oturum yok"}</span>
+            <span>{authQuery.data?.role || "anonim"}</span>
             <span>{shellStateLabel}</span>
             <span>Base: {shellConfigQuery.data?.reactBasePath || "/app"}</span>
             <span>Route: {currentRoute.path}</span>
+            <button type="button" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
+              Cikis yap
+            </button>
           </div>
         </header>
         <Outlet />

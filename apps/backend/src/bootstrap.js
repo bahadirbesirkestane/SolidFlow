@@ -22,6 +22,10 @@ const { AdvanceWorkflowInstanceUseCase } = require("./application/use-cases/adva
 const { ListUsersUseCase } = require("./application/use-cases/list-users-use-case");
 const { CreateUserUseCase } = require("./application/use-cases/create-user-use-case");
 const { DeactivateUserUseCase } = require("./application/use-cases/deactivate-user-use-case");
+const { LoginUseCase } = require("./application/use-cases/login-use-case");
+const { LogoutUseCase } = require("./application/use-cases/logout-use-case");
+const { GetCurrentAuthSessionUseCase } = require("./application/use-cases/get-current-auth-session-use-case");
+const { ResolveAuthContextUseCase } = require("./application/use-cases/resolve-auth-context-use-case");
 const { ListOpenJobsUseCase } = require("./application/use-cases/list-open-jobs-use-case");
 const { ListProjectAuditEventsUseCase } = require("./application/use-cases/list-project-audit-events-use-case");
 const { UpdateWorkflowStepUseCase } = require("./application/use-cases/update-workflow-step-use-case");
@@ -39,6 +43,7 @@ const { SqliteProjectRepository } = require("./infrastructure/repositories/sqlit
 const { SqliteWorkflowTemplateRepository } = require("./infrastructure/repositories/sqlite-workflow-template-repository");
 const { SqliteWorkflowInstanceRepository } = require("./infrastructure/repositories/sqlite-workflow-instance-repository");
 const { SqliteUserRepository } = require("./infrastructure/repositories/sqlite-user-repository");
+const { SqliteAuthSessionRepository } = require("./infrastructure/repositories/sqlite-auth-session-repository");
 const { SqliteOpenJobRepository } = require("./infrastructure/repositories/sqlite-open-job-repository");
 const { SqliteAuditLogRepository } = require("./infrastructure/repositories/sqlite-audit-log-repository");
 const { LocalAssignmentRuleRepository } = require("./infrastructure/repositories/local-assignment-rule-repository");
@@ -67,6 +72,8 @@ const { createHttpServer } = require("./presentation/http/server-factory");
 const { WindowsFolderPicker } = require("./infrastructure/services/windows-folder-picker");
 const { GlbModelPreviewService } = require("./infrastructure/services/glb-model-preview-service");
 const { CadConversionService } = require("./infrastructure/services/CadConversionService");
+const { PasswordHasher } = require("./infrastructure/services/password-hasher");
+const { LoginAttemptLimiter } = require("./infrastructure/services/login-attempt-limiter");
 
 function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const sqliteClient = new SqliteClient(rootPath);
@@ -81,6 +88,7 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const workflowTemplateRepository = new SqliteWorkflowTemplateRepository(db);
   const workflowInstanceRepository = new SqliteWorkflowInstanceRepository(db);
   const userRepository = new SqliteUserRepository(db);
+  const authSessionRepository = new SqliteAuthSessionRepository(db);
   const openJobRepository = new SqliteOpenJobRepository(db);
   const auditLogRepository = new SqliteAuditLogRepository(db);
   const assignmentRuleRepository = new LocalAssignmentRuleRepository(
@@ -102,6 +110,8 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     rootPath,
     config: appConfig.cadConversion,
   });
+  const passwordHasher = new PasswordHasher();
+  const loginAttemptLimiter = new LoginAttemptLimiter();
   const ruleResolver = new RuleResolver();
   const reportExporter = new WorkflowReportExporter(rootPath);
   const operationsReportExporter = new OperationsReportExporter(rootPath);
@@ -214,8 +224,18 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
       auditLogRepository,
     }),
     listUsers: new ListUsersUseCase({ userRepository }),
-    createUser: new CreateUserUseCase({ userRepository }),
-    deactivateUser: new DeactivateUserUseCase({ userRepository }),
+    createUser: new CreateUserUseCase({ userRepository, passwordHasher, auditLogRepository }),
+    deactivateUser: new DeactivateUserUseCase({ userRepository, auditLogRepository }),
+    login: new LoginUseCase({
+      userRepository,
+      authSessionRepository,
+      passwordHasher,
+      loginAttemptLimiter,
+      auditLogRepository,
+    }),
+    logout: new LogoutUseCase({ authSessionRepository, auditLogRepository }),
+    getCurrentAuthSession: new GetCurrentAuthSessionUseCase(),
+    resolveAuthContext: new ResolveAuthContextUseCase({ authSessionRepository }),
     listOpenJobs: new ListOpenJobsUseCase({ openJobRepository }),
     listProjectAuditEvents: new ListProjectAuditEventsUseCase({ auditLogRepository }),
     updateWorkflowStep: new UpdateWorkflowStepUseCase({ workflowInstanceRepository, auditLogRepository }),

@@ -24,7 +24,10 @@ export type UserRecord = {
   departmentName?: string;
   fullName: string;
   email?: string;
+  username?: string;
+  role?: "admin" | "manager" | "worker";
   isActive: boolean;
+  lastLoginAt?: string | null;
 };
 
 export type OpenJob = {
@@ -76,6 +79,7 @@ export type AuditEvent = {
   id: string;
   action: string;
   entityType: string;
+  actorUserId?: string;
   createdAt: string;
 };
 

@@ -1,16 +1,67 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { appRoutes } from "@/app/routes/page-config";
 import { AppLayout } from "@/widgets/layout/AppLayout";
+import { LoginPage } from "@/pages/auth/LoginPage";
+import { useAuthSession } from "@/entities/auth/hooks/useAuthSession";
 
 export function AppRouter() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedAppLayout />}>
         {appRoutes.map((route) => (
-          <Route key={route.key} path={route.path} element={route.element} />
+          <Route
+            key={route.key}
+            path={route.path}
+            element={<RoleGuard allowedRoles={route.allowedRoles}>{route.element}</RoleGuard>}
+          />
         ))}
       </Route>
-      <Route path="*" element={<Navigate to="/operations-center" replace />} />
+      <Route path="*" element={<FallbackRedirect />} />
     </Routes>
   );
+}
+
+function ProtectedAppLayout() {
+  const location = useLocation();
+  const authQuery = useAuthSession();
+
+  if (authQuery.isLoading) {
+    return <div className="auth-loading">Oturum kontrol ediliyor...</div>;
+  }
+
+  if (!authQuery.data) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return <AppLayout />;
+}
+
+function RoleGuard({ allowedRoles, children }: { allowedRoles?: string[]; children: ReactNode }) {
+  const authQuery = useAuthSession();
+
+  if (!allowedRoles || allowedRoles.length === 0) {
+    return <>{children}</>;
+  }
+
+  if (authQuery.data && allowedRoles.includes(authQuery.data.role)) {
+    return <>{children}</>;
+  }
+
+  return <Navigate to={resolveDefaultPath(authQuery.data?.role)} replace />;
+}
+
+function FallbackRedirect() {
+  const authQuery = useAuthSession();
+
+  if (!authQuery.data) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={resolveDefaultPath(authQuery.data.role)} replace />;
+}
+
+function resolveDefaultPath(role?: string) {
+  return role === "worker" ? "/user-workspace" : "/dashboard";
 }

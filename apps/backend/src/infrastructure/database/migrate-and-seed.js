@@ -1,10 +1,14 @@
 const fs = require("fs");
 const path = require("path");
+const { AUTH_ROLES } = require("../../domain/constants/auth-roles");
+const { PasswordHasher } = require("../services/password-hasher");
 
 function migrateAndSeedDatabase({ db, rootPath }) {
   createTables(db);
   ensureProjectFolderColumn(db);
   ensureFileNameRuleColumns(db);
+  ensureUserAuthColumns(db);
+  ensureAuditEventActorColumn(db);
   seedTableIfEmpty({
     db,
     tableName: "file_type_rules",
@@ -39,6 +43,8 @@ function migrateAndSeedDatabase({ db, rootPath }) {
   });
   ensureWorkflowTemplates(db, rootPath);
   seedDepartmentsAndUsersIfEmpty(db, rootPath);
+  backfillUserAuthData(db);
+  ensureBootstrapAdmin(db);
 }
 
 function createTables(db) {
@@ -119,10 +125,27 @@ function createTables(db) {
       department_id TEXT NOT NULL,
       full_name TEXT NOT NULL,
       email TEXT,
+      username TEXT,
+      role TEXT NOT NULL DEFAULT 'worker',
+      password_hash TEXT,
       is_active INTEGER NOT NULL DEFAULT 1,
+      last_login_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (department_id) REFERENCES departments(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      revoked_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS projects (
@@ -198,6 +221,7 @@ function createTables(db) {
     CREATE TABLE IF NOT EXISTS audit_events (
       id TEXT PRIMARY KEY,
       project_id TEXT,
+      actor_user_id TEXT,
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       action TEXT NOT NULL,
@@ -487,6 +511,29 @@ function ensureFileNameRuleColumns(db) {
   }
 }
 
+function ensureUserAuthColumns(db) {
+  const columns = db.prepare("PRAGMA table_info(users)").all();
+  const existingColumnNames = new Set(columns.map((column) => column.name));
+  const missingColumns = [
+    ["username", "TEXT"],
+    ["role", "TEXT NOT NULL DEFAULT 'worker'"],
+    ["password_hash", "TEXT"],
+    ["last_login_at", "TEXT"],
+  ].filter(([name]) => !existingColumnNames.has(name));
+
+  for (const [name, definition] of missingColumns) {
+    db.exec(`ALTER TABLE users ADD COLUMN ${name} ${definition}`);
+  }
+}
+
+function ensureAuditEventActorColumn(db) {
+  const columns = db.prepare("PRAGMA table_info(audit_events)").all();
+  const hasActorUserId = columns.some((column) => column.name === "actor_user_id");
+  if (!hasActorUserId) {
+    db.exec("ALTER TABLE audit_events ADD COLUMN actor_user_id TEXT");
+  }
+}
+
 function seedDepartmentsAndUsersIfEmpty(db, rootPath) {
   const departmentCount = db.prepare("SELECT COUNT(1) AS count FROM departments").get().count;
   const userCount = db.prepare("SELECT COUNT(1) AS count FROM users").get().count;
@@ -503,11 +550,12 @@ function seedDepartmentsAndUsersIfEmpty(db, rootPath) {
     VALUES (?, ?, ?)
   `);
   const userStatement = db.prepare(`
-    INSERT INTO users (id, department_id, full_name, email, is_active, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO users (id, department_id, full_name, email, username, role, password_hash, is_active, last_login_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const timestamp = new Date().toISOString();
+  const passwordHasher = new PasswordHasher();
   runInTransaction(db, () => {
     for (const department of departments) {
       departmentStatement.run(department.id, department.name, department.isActive ? 1 : 0);
@@ -518,7 +566,11 @@ function seedDepartmentsAndUsersIfEmpty(db, rootPath) {
         user.departmentId,
         user.fullName,
         user.email || "",
+        user.username || deriveUsernameFromUser(user),
+        user.role || AUTH_ROLES.WORKER,
+        passwordHasher.hashPassword(user.initialPassword || "Solid123!"),
         user.isActive ? 1 : 0,
+        null,
         timestamp,
         timestamp,
       );
@@ -535,6 +587,132 @@ function runInTransaction(db, callback) {
     db.exec("ROLLBACK");
     throw error;
   }
+}
+
+function backfillUserAuthData(db) {
+  const passwordHasher = new PasswordHasher();
+  const users = db.prepare(`
+    SELECT id, full_name, email, username, role, password_hash
+    FROM users
+  `).all();
+  const updateStatement = db.prepare(`
+    UPDATE users
+    SET username = ?, role = ?, password_hash = ?
+    WHERE id = ?
+  `);
+
+  runInTransaction(db, () => {
+    for (const user of users) {
+      const normalizedUsername = user.username || deriveUsernameFromUser({
+        fullName: user.full_name,
+        email: user.email,
+      });
+      const normalizedRole = user.role || AUTH_ROLES.WORKER;
+      const normalizedPasswordHash = user.password_hash || passwordHasher.hashPassword("Solid123!");
+      updateStatement.run(normalizedUsername, normalizedRole, normalizedPasswordHash, user.id);
+    }
+  });
+}
+
+function ensureBootstrapAdmin(db) {
+  const adminCount = db.prepare(`
+    SELECT COUNT(1) AS count
+    FROM users
+    WHERE role = ?
+  `).get(AUTH_ROLES.ADMIN).count;
+
+  if (adminCount > 0) {
+    return;
+  }
+
+  const firstDepartment = db.prepare(`
+    SELECT id
+    FROM departments
+    WHERE is_active = 1
+    ORDER BY name
+    LIMIT 1
+  `).get();
+
+  if (!firstDepartment?.id) {
+    return;
+  }
+
+  const passwordHasher = new PasswordHasher();
+  const timestamp = new Date().toISOString();
+  const existingAdminCandidate = db.prepare(`
+    SELECT id
+    FROM users
+    WHERE id = 'user-admin' OR username = 'admin'
+    LIMIT 1
+  `).get();
+
+  if (existingAdminCandidate?.id) {
+    db.prepare(`
+      UPDATE users
+      SET
+        department_id = ?,
+        full_name = ?,
+        email = ?,
+        username = ?,
+        role = ?,
+        password_hash = ?,
+        is_active = 1,
+        updated_at = ?
+      WHERE id = ?
+    `).run(
+      firstDepartment.id,
+      "Sistem Yoneticisi",
+      "admin@local",
+      "admin",
+      AUTH_ROLES.ADMIN,
+      passwordHasher.hashPassword("Admin123!"),
+      timestamp,
+      existingAdminCandidate.id,
+    );
+    return;
+  }
+
+  db.prepare(`
+    INSERT INTO users (
+      id,
+      department_id,
+      full_name,
+      email,
+      username,
+      role,
+      password_hash,
+      is_active,
+      last_login_at,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    "user-admin",
+    firstDepartment.id,
+    "Sistem Yoneticisi",
+    "admin@local",
+    "admin",
+    AUTH_ROLES.ADMIN,
+    passwordHasher.hashPassword("Admin123!"),
+    1,
+    null,
+    timestamp,
+    timestamp,
+  );
+}
+
+function deriveUsernameFromUser(user) {
+  const emailPrefix = String(user.email || "").split("@")[0].trim();
+  if (emailPrefix) {
+    return emailPrefix.toLowerCase();
+  }
+
+  return String(user.fullName || "kullanici")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "") || "kullanici";
 }
 
 module.exports = {

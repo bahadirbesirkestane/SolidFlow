@@ -2,6 +2,8 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
+const { authorizeRequest } = require("../../application/services/authorization-policy");
+const { isAppError } = require("../../shared/app-error");
 
 function createHttpServer({ application, reactDistDir, defaultScanDir, frontendConfig = {} }) {
   return http.createServer(async (request, response) => {
@@ -36,6 +38,50 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
           responseShape: "data-meta-error",
         });
         return;
+      }
+
+      const cookies = parseCookies(request.headers.cookie || "");
+      const sessionToken = cookies.solidflow_session || "";
+      const auth = await application.resolveAuthContext.execute(sessionToken);
+
+      if (request.method === "POST" && url.pathname === "/api/auth/login") {
+        const payload = await readJsonBody(request);
+        const result = await application.login.execute(payload || {}, {
+          ipAddress: getClientIpAddress(request),
+          userAgent: String(request.headers["user-agent"] || ""),
+        });
+        sendApiSuccess(response, 200, {
+          user: result.user,
+        }, {
+          authenticated: true,
+          sessionExpiresAt: result.session.expiresAt,
+        }, {
+          "Set-Cookie": createSessionCookie(result.session.token, result.session.expiresAt),
+        });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+        const result = await application.logout.execute(sessionToken, auth);
+        sendApiSuccess(response, 200, result, {
+          authenticated: false,
+        }, {
+          "Set-Cookie": createClearedSessionCookie(),
+        });
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/auth/me") {
+        authorizeRequest({ method: request.method, pathname: url.pathname, auth });
+        const currentUser = await application.getCurrentAuthSession.execute(auth);
+        sendApiSuccess(response, 200, currentUser, {
+          authenticated: true,
+        });
+        return;
+      }
+
+      if (url.pathname.startsWith("/api/")) {
+        authorizeRequest({ method: request.method, pathname: url.pathname, auth });
       }
 
       if (request.method === "POST" && url.pathname === "/api/system/select-folder") {
@@ -129,7 +175,7 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
 
       if (request.method === "POST" && url.pathname === "/api/operations/users") {
         const payload = await readJsonBody(request);
-        const result = await application.createUser.execute(payload);
+        const result = await application.createUser.execute(payload, auth?.user || null);
         sendJson(response, 201, result);
         return;
       }
@@ -285,7 +331,7 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
 
       const userMatch = matchPath(url.pathname, "/api/operations/users/:userId");
       if (request.method === "DELETE" && userMatch) {
-        const result = await application.deactivateUser.execute(userMatch.userId);
+        const result = await application.deactivateUser.execute(userMatch.userId, auth?.user || null);
         sendJson(response, 200, result);
         return;
       }
@@ -421,28 +467,51 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
 
       sendText(response, 404, "Dosya bulunamadi.");
     } catch (error) {
-      sendJson(response, 500, {
-        error: "Sunucu hatasi",
+      if (isAppError(error)) {
+        sendApiError(
+          response,
+          error.statusCode,
+          error.code,
+          error.message,
+          error.details,
+        );
+        return;
+      }
+
+      sendApiError(response, 500, "INTERNAL_SERVER_ERROR", "Sunucu hatasi", {
         detail: error.message,
       });
     }
   });
 }
 
-function sendApiSuccess(response, statusCode, data, meta = {}) {
+function sendApiSuccess(response, statusCode, data, meta = {}, headers = {}) {
   sendJson(response, statusCode, {
     data,
     meta,
     error: null,
+  }, headers);
+}
+
+function sendApiError(response, statusCode, code, message, details = null) {
+  sendJson(response, statusCode, {
+    data: null,
+    meta: {},
+    error: {
+      code,
+      message,
+      details,
+    },
   });
 }
 
-function sendJson(response, statusCode, payload) {
+function sendJson(response, statusCode, payload, extraHeaders = {}) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
     Pragma: "no-cache",
     Expires: "0",
+    ...extraHeaders,
   });
   response.end(JSON.stringify(payload));
 }
@@ -521,6 +590,53 @@ function matchPath(pathname, template) {
   }
 
   return params;
+}
+
+function parseCookies(cookieHeader) {
+  return String(cookieHeader || "")
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .reduce((accumulator, chunk) => {
+      const separatorIndex = chunk.indexOf("=");
+      if (separatorIndex <= 0) {
+        return accumulator;
+      }
+
+      const key = chunk.slice(0, separatorIndex).trim();
+      const value = chunk.slice(separatorIndex + 1).trim();
+      accumulator[key] = decodeURIComponent(value);
+      return accumulator;
+    }, {});
+}
+
+function getClientIpAddress(request) {
+  const forwardedFor = String(request.headers["x-forwarded-for"] || "").trim();
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return String(request.socket.remoteAddress || "");
+}
+
+function createSessionCookie(sessionToken, expiresAt) {
+  return [
+    `solidflow_session=${encodeURIComponent(sessionToken)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Expires=${new Date(expiresAt).toUTCString()}`,
+  ].join("; ");
+}
+
+function createClearedSessionCookie() {
+  return [
+    "solidflow_session=",
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+  ].join("; ");
 }
 
 function sendStaticFile(request, response, filePath) {

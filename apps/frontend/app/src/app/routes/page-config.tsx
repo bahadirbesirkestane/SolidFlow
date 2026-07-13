@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { AuthRole } from "@/entities/auth/api/auth-api";
 import { DashboardPage } from "@/pages/dashboard/DashboardPage";
 import { OperationsCenterPage } from "@/pages/operations-center/OperationsCenterPage";
 import { RulesOverviewPage } from "@/pages/rules/RulesOverviewPage";
@@ -13,6 +14,7 @@ export type AppRouteDefinition = {
   section: string;
   description: string;
   element: ReactNode;
+  allowedRoles?: AuthRole[];
 };
 
 export const appRoutes: AppRouteDefinition[] = [
@@ -23,6 +25,7 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Ana Ekranlar",
     description: "Yonetici ozeti ve kritik metrikler",
     element: <DashboardPage />,
+    allowedRoles: ["admin", "manager"],
   },
   {
     key: "operations-center",
@@ -31,6 +34,7 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Ana Ekranlar",
     description: "Proje, workflow ve audit yonetimi",
     element: <OperationsCenterPage />,
+    allowedRoles: ["admin", "manager"],
   },
   {
     key: "user-workspace",
@@ -39,6 +43,7 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Ana Ekranlar",
     description: "Kisi bazli is takibi",
     element: <UserWorkspacePage />,
+    allowedRoles: ["admin", "manager", "worker"],
   },
   {
     key: "erp-center",
@@ -47,6 +52,7 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Ana Ekranlar",
     description: "ERP ve operasyon aktarimlari",
     element: <ErpCenterPage />,
+    allowedRoles: ["admin", "manager"],
   },
   {
     key: "workflow-builder",
@@ -55,6 +61,7 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Tarama ve Kural Motoru",
     description: "Klasor tarama, parca listesi ve toplu operasyon aktarimi",
     element: <WorkflowBuilderPage />,
+    allowedRoles: ["admin", "manager"],
   },
   {
     key: "rules",
@@ -63,5 +70,6 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Tarama ve Kural Motoru",
     description: "Dosya adi, tip ve yonlendirme kurallari",
     element: <RulesOverviewPage />,
+    allowedRoles: ["admin"],
   },
 ];

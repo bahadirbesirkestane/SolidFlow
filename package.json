@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node apps/backend/src/server.js",
     "start:backend": "node apps/backend/src/server.js",
-    "test:backend": "node --test apps/backend/src/application/use-cases/scan-project-use-case.test.js apps/backend/src/domain/services/rule-resolver.test.js",
+    "test:backend": "node --test apps/backend/src/application/use-cases/scan-project-use-case.test.js apps/backend/src/application/use-cases/login-use-case.test.js apps/backend/src/domain/services/rule-resolver.test.js apps/backend/src/presentation/http/auth-http.test.js",
     "frontend:install": "node scripts/run-frontend-command.js install",
     "frontend:dev": "node scripts/run-frontend-command.js dev",
     "frontend:build": "node scripts/frontend-build.mjs",
