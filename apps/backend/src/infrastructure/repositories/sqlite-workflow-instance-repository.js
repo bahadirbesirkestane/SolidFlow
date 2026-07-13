@@ -459,6 +459,83 @@ class SqliteWorkflowInstanceRepository {
     return instance;
   }
 
+  async getUserWorkSummary(userId) {
+    const activeAssignments = this.db.prepare(`
+      SELECT
+        wis.id,
+        wis.instance_id,
+        wis.name,
+        wis.status,
+        wis.sequence_no,
+        wi.name AS workflow_name,
+        wi.progress_percent,
+        wi.project_id,
+        p.code AS project_code,
+        p.name AS project_name,
+        wis.updated_at
+      FROM workflow_step_assignees wsa
+      INNER JOIN workflow_instance_steps wis ON wis.id = wsa.step_id
+      INNER JOIN workflow_instances wi ON wi.id = wis.instance_id
+      LEFT JOIN projects p ON p.id = wi.project_id
+      WHERE wsa.user_id = ?
+        AND wis.status IN ('ready', 'in_progress')
+      ORDER BY wis.updated_at DESC
+    `).all(userId).map((row) => ({
+      stepId: row.id,
+      instanceId: row.instance_id,
+      stepName: row.name,
+      status: row.status,
+      sequenceNo: row.sequence_no,
+      workflowName: row.workflow_name,
+      progressPercent: row.progress_percent,
+      projectId: row.project_id,
+      projectCode: row.project_code || "",
+      projectName: row.project_name || "",
+      updatedAt: row.updated_at,
+    }));
+
+    const completedAssignments = this.db.prepare(`
+      SELECT
+        wis.id,
+        wis.instance_id,
+        wis.name,
+        wis.completed_at,
+        wi.name AS workflow_name,
+        wi.project_id,
+        p.code AS project_code,
+        p.name AS project_name
+      FROM workflow_step_assignees wsa
+      INNER JOIN workflow_instance_steps wis ON wis.id = wsa.step_id
+      INNER JOIN workflow_instances wi ON wi.id = wis.instance_id
+      LEFT JOIN projects p ON p.id = wi.project_id
+      WHERE wsa.user_id = ?
+        AND wis.status = 'completed'
+      ORDER BY wis.completed_at DESC
+      LIMIT 10
+    `).all(userId).map((row) => ({
+      stepId: row.id,
+      instanceId: row.instance_id,
+      stepName: row.name,
+      workflowName: row.workflow_name,
+      projectId: row.project_id,
+      projectCode: row.project_code || "",
+      projectName: row.project_name || "",
+      completedAt: row.completed_at,
+    }));
+
+    return {
+      activeAssignmentCount: activeAssignments.length,
+      completedAssignmentCount: this.db.prepare(`
+        SELECT COUNT(1) AS count
+        FROM workflow_step_assignees wsa
+        INNER JOIN workflow_instance_steps wis ON wis.id = wsa.step_id
+        WHERE wsa.user_id = ? AND wis.status = 'completed'
+      `).get(userId).count,
+      activeAssignments,
+      recentCompletedAssignments: completedAssignments,
+    };
+  }
+
   recalculateInstance(instanceId, timestamp) {
     const progressRow = this.db.prepare(`
       SELECT

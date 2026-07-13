@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useOperationsPageData } from "@/entities/operations/hooks/useOperationsPageData";
 import { DrawerPanel } from "@/shared/ui/DrawerPanel";
 import { FormField } from "@/shared/ui/FormField";
@@ -31,7 +32,6 @@ export function OperationsCenterPage() {
     auditEvents,
     auditQuery,
     createProjectMutation,
-    createUserMutation,
     effectiveProjectId,
     openJobsQuery,
     projectDashboardQuery,
@@ -51,11 +51,6 @@ export function OperationsCenterPage() {
     name: "",
     description: "",
     autoGenerateFromFolder: "",
-  });
-  const [userForm, setUserForm] = useState({
-    fullName: "",
-    email: "",
-    departmentId: "",
   });
 
   const operationErrors = [
@@ -82,21 +77,6 @@ export function OperationsCenterPage() {
       name: "",
       description: "",
       autoGenerateFromFolder: "",
-    });
-  }
-
-  async function handleUserSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await createUserMutation.mutateAsync({
-      departmentId: userForm.departmentId,
-      fullName: userForm.fullName.trim(),
-      email: userForm.email.trim(),
-      isActive: true,
-    });
-    setUserForm({
-      fullName: "",
-      email: "",
-      departmentId: "",
     });
   }
 
@@ -268,46 +248,16 @@ export function OperationsCenterPage() {
 
             <SectionCard
               title="Kullanici Yonetimi"
-              description="Aktif kullanicilari ekle, departman dagilimini izle ve veri girisini tek panelden yonet."
+              description="Kullanici olusturma ve yetki islemleri artik ayri yonetim sayfasinda ilerler."
             >
-              <form className="form-grid" onSubmit={handleUserSubmit}>
-                <FormField label="Ad soyad">
-                  <input
-                    value={userForm.fullName}
-                    onChange={(event) => setUserForm((current) => ({ ...current, fullName: event.target.value }))}
-                    placeholder="Ad Soyad"
-                    required
-                  />
-                </FormField>
-                <FormField label="E-posta">
-                  <input
-                    value={userForm.email}
-                    onChange={(event) => setUserForm((current) => ({ ...current, email: event.target.value }))}
-                    placeholder="E-posta"
-                  />
-                </FormField>
-                <FormField label="Departman">
-                  <select
-                    value={userForm.departmentId}
-                    onChange={(event) =>
-                      setUserForm((current) => ({ ...current, departmentId: event.target.value }))
-                    }
-                    required
-                  >
-                    <option value="">Departman sec</option>
-                    {(usersQuery.data?.departments || []).map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-                <div className="form-actions">
-                  <button type="submit" disabled={createUserMutation.isPending}>
-                    {createUserMutation.isPending ? "Ekleniyor..." : "Kullanici Ekle"}
-                  </button>
+              <div className="stack-list">
+                <StatusBanner>
+                  Kullanici ekleme, rol atama ve profil inceleme artik ayri yonetim sayfasindan yapilir.
+                </StatusBanner>
+                <div className="section-card__action-row">
+                  <Link to="/user-management">Kullanici ve Yetki Sayfasini Ac</Link>
                 </div>
-              </form>
+              </div>
 
               <div className="department-grid">
                 {usersByDepartment.map((department) => (
@@ -320,7 +270,7 @@ export function OperationsCenterPage() {
                       {department.users.slice(0, 3).map((user) => (
                         <div key={user.id} className="simple-list-card simple-list-card--compact">
                           <strong>{user.fullName}</strong>
-                          <small>{user.email || "E-posta yok"}</small>
+                          <small>{user.role || "worker"} | {user.email || "E-posta yok"}</small>
                         </div>
                       ))}
                     </div>

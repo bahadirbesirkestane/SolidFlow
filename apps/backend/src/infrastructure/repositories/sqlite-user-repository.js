@@ -131,6 +131,61 @@ class SqliteUserRepository {
       WHERE id = ?
     `).run(nowIso(), nowIso(), userId);
   }
+
+  async updateUser(userId, input) {
+    const existingUser = await this.getUserById(userId);
+    if (!existingUser) {
+      return null;
+    }
+
+    const nextUsername = input.username ?? existingUser.username;
+    const nextEmail = input.email ?? existingUser.email ?? "";
+    const duplicate = this.db.prepare(`
+      SELECT id
+      FROM users
+      WHERE id <> ?
+        AND (
+          lower(username) = ?
+          OR (? <> '' AND lower(email) = ?)
+        )
+      LIMIT 1
+    `).get(
+      userId,
+      String(nextUsername || "").trim().toLowerCase(),
+      String(nextEmail || "").trim().toLowerCase(),
+      String(nextEmail || "").trim().toLowerCase(),
+    );
+
+    if (duplicate?.id) {
+      throw new Error("Ayni kullanici adi veya e-posta zaten kayitli.");
+    }
+
+    this.db.prepare(`
+      UPDATE users
+      SET
+        department_id = ?,
+        full_name = ?,
+        email = ?,
+        username = ?,
+        role = ?,
+        password_hash = COALESCE(?, password_hash),
+        is_active = ?,
+        updated_at = ?
+      WHERE id = ?
+    `).run(
+      input.departmentId ?? existingUser.departmentId,
+      input.fullName ?? existingUser.fullName,
+      nextEmail,
+      nextUsername,
+      input.role ?? existingUser.role,
+      input.passwordHash ?? null,
+      input.isActive === undefined ? (existingUser.isActive ? 1 : 0) : (input.isActive ? 1 : 0),
+      nowIso(),
+      userId,
+    );
+
+    return this.getUserById(userId);
+  }
 }
 
 function mapUser(row) {

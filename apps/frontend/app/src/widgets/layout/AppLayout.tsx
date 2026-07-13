@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { appRoutes } from "@/app/routes/page-config";
 import { groupRoutesBySection } from "@/app/routes/route-groups";
 import { logout } from "@/entities/auth/api/auth-api";
@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authQuery = useAuthSession();
   const availableRoutes = appRoutes.filter((route) => {
@@ -23,7 +24,9 @@ export function AppLayout() {
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: async () => {
+      queryClient.setQueryData(["auth", "session"], null);
       await queryClient.invalidateQueries({ queryKey: ["auth", "session"] });
+      navigate("/login", { replace: true });
     },
   });
   const shellStateLabel = shellConfigQuery.isLoading

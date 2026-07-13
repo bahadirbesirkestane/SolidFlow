@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type UserRecord,
   createProject,
-  createUser,
   getProjectDashboard,
   listOpenJobs,
   listProjectAuditEvents,
@@ -48,13 +47,6 @@ export function useOperationsPageData() {
         queryClient.invalidateQueries({ queryKey: ["operations", "projects"] }),
         queryClient.invalidateQueries({ queryKey: ["operations", "openJobs"] }),
       ]);
-    },
-  });
-
-  const createUserMutation = useMutation({
-    mutationFn: createUser,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["operations", "users"] });
     },
   });
 
@@ -154,7 +146,6 @@ export function useOperationsPageData() {
     auditQuery,
     auditEvents,
     createProjectMutation,
-    createUserMutation,
     effectiveProjectId,
     projectOpenJobs,
     railMetrics,

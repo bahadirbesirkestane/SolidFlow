@@ -30,6 +30,37 @@ export type UserRecord = {
   lastLoginAt?: string | null;
 };
 
+export type UserProfileSummary = {
+  user: UserRecord;
+  summary: {
+    activeAssignmentCount: number;
+    completedAssignmentCount: number;
+    activeAssignments: Array<{
+      stepId: string;
+      instanceId: string;
+      stepName: string;
+      status: string;
+      sequenceNo: number;
+      workflowName: string;
+      progressPercent: number;
+      projectId: string;
+      projectCode: string;
+      projectName: string;
+      updatedAt: string;
+    }>;
+    recentCompletedAssignments: Array<{
+      stepId: string;
+      instanceId: string;
+      stepName: string;
+      workflowName: string;
+      projectId: string;
+      projectCode: string;
+      projectName: string;
+      completedAt: string;
+    }>;
+  };
+};
+
 export type OpenJob = {
   id: string;
   projectId?: string;
@@ -124,12 +155,43 @@ export function createUser(payload: {
   departmentId: string;
   fullName: string;
   email: string;
+  username?: string;
+  role?: "admin" | "manager" | "worker";
+  password?: string;
   isActive: boolean;
 }) {
   return apiRequest<UserRecord>("/api/operations/users", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function updateUser(
+  userId: string,
+  payload: {
+    departmentId?: string;
+    fullName?: string;
+    email?: string;
+    username?: string;
+    role?: "admin" | "manager" | "worker";
+    password?: string;
+    isActive?: boolean;
+  },
+) {
+  return apiRequest<UserRecord>(`/api/operations/users/${encodeURIComponent(userId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deactivateUser(userId: string) {
+  return apiRequest<{ success: boolean }>(`/api/operations/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function getUserProfile(userId: string) {
+  return apiRequest<UserProfileSummary>(`/api/operations/users/${encodeURIComponent(userId)}/profile`);
 }
 
 export function advanceWorkflowInstance(

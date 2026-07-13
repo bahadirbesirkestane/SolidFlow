@@ -102,5 +102,9 @@ function resolvePostLoginPath(role: AuthRole, requestedPath?: string) {
     return "/user-workspace";
   }
 
+  if (role === "manager") {
+    return "/operations-center";
+  }
+
   return "/dashboard";
 }

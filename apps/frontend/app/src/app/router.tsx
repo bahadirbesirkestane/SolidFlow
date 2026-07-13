@@ -41,6 +41,10 @@ function ProtectedAppLayout() {
 function RoleGuard({ allowedRoles, children }: { allowedRoles?: string[]; children: ReactNode }) {
   const authQuery = useAuthSession();
 
+  if (authQuery.isLoading) {
+    return <div className="auth-loading">Yetki kontrol ediliyor...</div>;
+  }
+
   if (!allowedRoles || allowedRoles.length === 0) {
     return <>{children}</>;
   }
@@ -55,6 +59,10 @@ function RoleGuard({ allowedRoles, children }: { allowedRoles?: string[]; childr
 function FallbackRedirect() {
   const authQuery = useAuthSession();
 
+  if (authQuery.isLoading) {
+    return <div className="auth-loading">Yonlendirme hazirlaniyor...</div>;
+  }
+
   if (!authQuery.data) {
     return <Navigate to="/login" replace />;
   }
@@ -63,5 +71,13 @@ function FallbackRedirect() {
 }
 
 function resolveDefaultPath(role?: string) {
-  return role === "worker" ? "/user-workspace" : "/dashboard";
+  if (role === "admin") {
+    return "/dashboard";
+  }
+
+  if (role === "manager") {
+    return "/operations-center";
+  }
+
+  return "/user-workspace";
 }

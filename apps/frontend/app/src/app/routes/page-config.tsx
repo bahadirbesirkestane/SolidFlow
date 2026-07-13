@@ -6,6 +6,7 @@ import { RulesOverviewPage } from "@/pages/rules/RulesOverviewPage";
 import { ErpCenterPage } from "@/pages/erp/ErpCenterPage";
 import { UserWorkspacePage } from "@/pages/user-workspace/UserWorkspacePage";
 import { WorkflowBuilderPage } from "@/pages/workflow-builder/WorkflowBuilderPage";
+import { UserManagementPage } from "@/pages/user-management/UserManagementPage";
 
 export type AppRouteDefinition = {
   key: string;
@@ -62,6 +63,15 @@ export const appRoutes: AppRouteDefinition[] = [
     description: "Klasor tarama, parca listesi ve toplu operasyon aktarimi",
     element: <WorkflowBuilderPage />,
     allowedRoles: ["admin", "manager"],
+  },
+  {
+    key: "user-management",
+    path: "/user-management",
+    title: "Kullanici ve Yetki",
+    section: "Yonetim",
+    description: "Kullanici, rol ve departman yonetimi",
+    element: <UserManagementPage />,
+    allowedRoles: ["admin"],
   },
   {
     key: "rules",
