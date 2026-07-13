@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  type AssignmentRulesConfig,
   type FileNameRule,
   type FileTypeRule,
   type KeywordRule,
   type PartOverride,
+  getAssignmentRules,
   getRuleResolverConfig,
   listFileNameRules,
   listFileTypeRules,
@@ -13,6 +15,7 @@ import {
   saveFileTypeRules,
   saveKeywordRules,
   savePartOverrides,
+  saveAssignmentRules,
 } from "@/entities/rules/api/rules-api";
 
 export function useRulesCenterData() {
@@ -38,6 +41,10 @@ export function useRulesCenterData() {
     queryKey: ["rules", "resolver"],
     queryFn: getRuleResolverConfig,
   });
+  const assignmentRulesQuery = useQuery({
+    queryKey: ["rules", "assignment"],
+    queryFn: getAssignmentRules,
+  });
 
   async function refreshAll() {
     await Promise.all([
@@ -46,6 +53,7 @@ export function useRulesCenterData() {
       fileNameRulesQuery.refetch(),
       partOverridesQuery.refetch(),
       resolverConfigQuery.refetch(),
+      assignmentRulesQuery.refetch(),
     ]);
   }
 
@@ -89,16 +97,27 @@ export function useRulesCenterData() {
     },
   });
 
+  const saveAssignmentRulesMutation = useMutation({
+    mutationFn: (payload: AssignmentRulesConfig) => saveAssignmentRules(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rules", "assignment"] }),
+      ]);
+    },
+  });
+
   return {
     fileTypeRulesQuery,
     keywordRulesQuery,
     fileNameRulesQuery,
     partOverridesQuery,
     resolverConfigQuery,
+    assignmentRulesQuery,
     refreshAll,
     saveFileTypeRulesMutation,
     saveKeywordRulesMutation,
     saveFileNameRulesMutation,
     savePartOverridesMutation,
+    saveAssignmentRulesMutation,
   };
 }

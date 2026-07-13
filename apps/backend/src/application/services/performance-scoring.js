@@ -7,9 +7,9 @@ const BLOCK_REASON_LABELS = {
   GENEL: "Genel bekleme",
 };
 
-function calculatePerformanceProfile({ activeAssignments, completedAssignments, manualAdjustments }) {
+function calculatePerformanceProfile({ activeAssignments, completedAssignments, manualAdjustments, slaRules }) {
   const normalizedCompleted = (completedAssignments || [])
-    .map((assignment) => normalizeCompletedAssignment(assignment))
+    .map((assignment) => normalizeCompletedAssignment(assignment, slaRules || []))
     .filter(Boolean);
   const normalizedActive = (activeAssignments || []).map((assignment) => ({
     ...assignment,
@@ -105,12 +105,17 @@ function summarizeBlockedReasons(assignments) {
   }));
 }
 
-function normalizeCompletedAssignment(assignment) {
+function normalizeCompletedAssignment(assignment, slaRules) {
   if (!assignment?.createdAt || !assignment?.completedAt) {
     return null;
   }
 
-  const targetHours = resolveTargetHours(assignment.stepName || assignment.workflowName || "");
+  const targetHours = resolveTargetHours({
+    workflowTemplateId: assignment.workflowTemplateId,
+    workflowName: assignment.workflowName || "",
+    stepName: assignment.stepName || "",
+    slaRules,
+  });
   const actualHours = diffHours(assignment.createdAt, assignment.completedAt);
 
   return {
@@ -176,8 +181,21 @@ function parseBlockedReason(note) {
   };
 }
 
-function resolveTargetHours(stepName) {
-  const normalized = String(stepName || "").toLocaleLowerCase("tr-TR");
+function resolveTargetHours({ workflowTemplateId, workflowName, stepName, slaRules }) {
+  const matchedRule = [...(slaRules || [])]
+    .filter((rule) => rule.isActive !== false)
+    .sort((left, right) => Number(right.priority || 0) - Number(left.priority || 0))
+    .find((rule) => {
+      const templateMatches = !rule.workflowTemplateId || rule.workflowTemplateId === workflowTemplateId;
+      const workflowMatches = !rule.workflowNamePattern || includesNormalized(workflowName, rule.workflowNamePattern);
+      const stepMatches = !rule.stepNamePattern || includesNormalized(stepName, rule.stepNamePattern);
+      return templateMatches && workflowMatches && stepMatches;
+    });
+  if (matchedRule?.targetHours) {
+    return Number(matchedRule.targetHours);
+  }
+
+  const normalized = String(stepName || workflowName || "").toLocaleLowerCase("tr-TR");
   if (normalized.includes("kalite")) {
     return 6;
   }
@@ -195,6 +213,10 @@ function resolveTargetHours(stepName) {
   }
 
   return 8;
+}
+
+function includesNormalized(left, right) {
+  return String(left || "").toLocaleLowerCase("tr-TR").includes(String(right || "").toLocaleLowerCase("tr-TR"));
 }
 
 function scoreSpeed(actualHours, targetHours) {

@@ -508,6 +508,7 @@ class SqliteWorkflowInstanceRepository {
         wis.handover_to,
         wis.completion_note,
         wi.name AS workflow_name,
+        wi.template_id,
         wi.project_id,
         p.code AS project_code,
         p.name AS project_name
@@ -524,6 +525,7 @@ class SqliteWorkflowInstanceRepository {
       stepName: row.name,
       createdAt: row.created_at,
       workflowName: row.workflow_name,
+      workflowTemplateId: row.template_id || "",
       projectId: row.project_id,
       projectCode: row.project_code || "",
       projectName: row.project_name || "",

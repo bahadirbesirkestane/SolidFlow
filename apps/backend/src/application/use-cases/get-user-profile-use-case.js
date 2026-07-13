@@ -5,10 +5,11 @@ const {
 } = require("../services/performance-scoring");
 
 class GetUserProfileUseCase {
-  constructor({ userRepository, workflowInstanceRepository, auditLogRepository }) {
+  constructor({ userRepository, workflowInstanceRepository, auditLogRepository, assignmentRuleRepository }) {
     this.userRepository = userRepository;
     this.workflowInstanceRepository = workflowInstanceRepository;
     this.auditLogRepository = auditLogRepository;
+    this.assignmentRuleRepository = assignmentRuleRepository;
   }
 
   async execute(userId) {
@@ -21,10 +22,13 @@ class GetUserProfileUseCase {
     }
 
     const summary = await this.workflowInstanceRepository.getUserWorkSummary(userId);
+    const assignmentConfig = await this.assignmentRuleRepository.getConfig();
+    const workflowSlaRules = assignmentConfig.workflowSlaRules || [];
     const manualAdjustments = await this.auditLogRepository.listByEntity("user_score", userId);
     const performance = calculatePerformanceProfile({
       activeAssignments: summary.activeAssignments,
       completedAssignments: summary.completedAssignments,
+      slaRules: workflowSlaRules,
       manualAdjustments: manualAdjustments.map((item) => ({
         id: item.id,
         delta: Number(item.payload?.delta || 0),
@@ -43,6 +47,7 @@ class GetUserProfileUseCase {
       const departmentPerformance = calculatePerformanceProfile({
         activeAssignments: departmentSummary.activeAssignments,
         completedAssignments: departmentSummary.completedAssignments,
+        slaRules: workflowSlaRules,
         manualAdjustments: departmentAdjustments.map((item) => ({
           delta: Number(item.payload?.delta || 0),
         })),

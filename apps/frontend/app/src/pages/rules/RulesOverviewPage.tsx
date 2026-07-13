@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRulesCenterData } from "@/entities/rules/hooks/useRulesCenterData";
 import {
+  type AssignmentRulesConfig,
+  type DepartmentMappingRule,
   type FileNameRule,
   type FileTypeRule,
   type KeywordRule,
   type PartOverride,
+  type WorkflowSlaRule,
 } from "@/entities/rules/api/rules-api";
 import { DataTable } from "@/shared/ui/DataTable";
 import { FormField } from "@/shared/ui/FormField";
@@ -75,6 +78,33 @@ function createPartOverride(): PartOverride {
   };
 }
 
+type DepartmentMappingDraftRule = DepartmentMappingRule & {
+  clientId: string;
+};
+
+function createDepartmentMappingDraftRule(input?: Partial<DepartmentMappingRule>): DepartmentMappingDraftRule {
+  return {
+    clientId: `department-rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    departmentId: String(input?.departmentId || ""),
+    departmentName: String(input?.departmentName || ""),
+    aliases: Array.isArray(input?.aliases) ? input.aliases : [],
+  };
+}
+
+function createWorkflowSlaRule(): WorkflowSlaRule {
+  return {
+    id: `sla-rule-${Date.now()}`,
+    workflowTemplateId: "",
+    workflowNamePattern: "",
+    stepNamePattern: "",
+    targetHours: 8,
+    warningHours: 12,
+    priority: 0,
+    note: "",
+    isActive: true,
+  };
+}
+
 export function RulesOverviewPage() {
   const {
     fileTypeRulesQuery,
@@ -82,17 +112,21 @@ export function RulesOverviewPage() {
     fileNameRulesQuery,
     partOverridesQuery,
     resolverConfigQuery,
+    assignmentRulesQuery,
     refreshAll,
     saveFileTypeRulesMutation,
     saveKeywordRulesMutation,
     saveFileNameRulesMutation,
     savePartOverridesMutation,
+    saveAssignmentRulesMutation,
   } = useRulesCenterData();
 
   const [fileTypeDraft, setFileTypeDraft] = useState<FileTypeRule[]>([]);
   const [keywordDraft, setKeywordDraft] = useState<KeywordRule[]>([]);
   const [fileNameDraft, setFileNameDraft] = useState<FileNameRule[]>([]);
   const [overrideDraft, setOverrideDraft] = useState<PartOverride[]>([]);
+  const [departmentMappingDraft, setDepartmentMappingDraft] = useState<DepartmentMappingDraftRule[]>([]);
+  const [workflowSlaDraft, setWorkflowSlaDraft] = useState<WorkflowSlaRule[]>([]);
   const [overrideForm, setOverrideForm] = useState<PartOverride>(createPartOverride());
 
   useEffect(() => {
@@ -119,11 +153,21 @@ export function RulesOverviewPage() {
     }
   }, [partOverridesQuery.data]);
 
+  useEffect(() => {
+    if (assignmentRulesQuery.data) {
+      setDepartmentMappingDraft(
+        (assignmentRulesQuery.data.departmentMappings || []).map((rule) => createDepartmentMappingDraftRule(rule)),
+      );
+      setWorkflowSlaDraft(assignmentRulesQuery.data.workflowSlaRules || []);
+    }
+  }, [assignmentRulesQuery.data]);
+
   const firstError = [
     fileTypeRulesQuery.error,
     keywordRulesQuery.error,
     fileNameRulesQuery.error,
     partOverridesQuery.error,
+    assignmentRulesQuery.error,
     resolverConfigQuery.error,
   ].find((error): error is Error => Boolean(error));
 
@@ -454,6 +498,18 @@ export function RulesOverviewPage() {
   async function handleSaveOverrides() {
     await savePartOverridesMutation.mutateAsync(overrideDraft);
     setOverrideForm(createPartOverride());
+  }
+
+  async function handleSaveAssignmentRules() {
+    const payload: AssignmentRulesConfig = {
+      departmentMappings: departmentMappingDraft.map(({ departmentId, departmentName, aliases }) => ({
+        departmentId,
+        departmentName,
+        aliases,
+      })),
+      workflowSlaRules: workflowSlaDraft,
+    };
+    await saveAssignmentRulesMutation.mutateAsync(payload);
   }
 
   function appendOverride() {
@@ -896,6 +952,173 @@ export function RulesOverviewPage() {
             />
           </SectionCard>
         </div>
+
+        <SectionCard
+          title="Yonlendirme ve SLA Kurallari"
+          description="Departman eslesmeleri ile workflow hedef sureleri ayni merkezden yonetilir."
+          actions={
+            <div className="section-card__action-row">
+              <button
+                type="button"
+                onClick={() => setDepartmentMappingDraft((current) => [...current, createDepartmentMappingDraftRule()])}
+              >
+                Departman Kurali
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkflowSlaDraft((current) => [...current, createWorkflowSlaRule()])}
+              >
+                SLA Kurali
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDepartmentMappingDraft(
+                    (assignmentRulesQuery.data?.departmentMappings || []).map((rule) =>
+                      createDepartmentMappingDraftRule(rule),
+                    ),
+                  );
+                  setWorkflowSlaDraft(assignmentRulesQuery.data?.workflowSlaRules || []);
+                }}
+              >
+                Temizle
+              </button>
+              <button type="button" onClick={() => void handleSaveAssignmentRules()} disabled={saveAssignmentRulesMutation.isPending}>
+                {saveAssignmentRulesMutation.isPending ? "Kaydediliyor..." : "Routing ve SLA Kaydet"}
+              </button>
+            </div>
+          }
+        >
+          <div className="rules-two-column">
+            <article className="workspace-panel">
+              <div className="workspace-panel__header">
+                <div>
+                  <h3>Departman Eslesmeleri</h3>
+                  <p>Dosya veya adim alias degerleri hangi departmana dusecek burada belirlenir.</p>
+                </div>
+              </div>
+              <div className="rule-card-list">
+                {departmentMappingDraft.map((rule, index) => (
+                  <article key={rule.clientId} className="rule-editor-card">
+                    <div className="rule-card-grid">
+                      <FormField label="Departman Id">
+                        <input
+                          value={rule.departmentId}
+                          onChange={(event) => setDepartmentMappingDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, departmentId: event.target.value } : item))}
+                          placeholder="dept-quality"
+                        />
+                      </FormField>
+                      <FormField label="Departman Adi">
+                        <input
+                          value={rule.departmentName}
+                          onChange={(event) => setDepartmentMappingDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, departmentName: event.target.value } : item))}
+                          placeholder="Kalite Kontrol"
+                        />
+                      </FormField>
+                      <FormField label="Aliaslar" hint="Virgul ile ayir">
+                        <input
+                          value={rule.aliases.join(", ")}
+                          onChange={(event) => setDepartmentMappingDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, aliases: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) } : item))}
+                          placeholder="KALITE, QC, KONTROL"
+                        />
+                      </FormField>
+                    </div>
+                    <div className="form-actions">
+                      <button type="button" onClick={() => setDepartmentMappingDraft((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                        Sil
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {departmentMappingDraft.length === 0 ? <div className="empty-state">Departman kuralı yok.</div> : null}
+              </div>
+            </article>
+
+            <article className="workspace-panel">
+              <div className="workspace-panel__header">
+                <div>
+                  <h3>Workflow SLA Kurallari</h3>
+                  <p>Puanlama ve gecikme analizi burada tanimlanan hedef sureleri kullanir.</p>
+                </div>
+              </div>
+              <div className="rule-card-list">
+                {workflowSlaDraft.map((rule, index) => (
+                  <article key={rule.id || index} className="rule-editor-card">
+                    <div className="rule-editor-card__header">
+                      <div className="rule-editor-card__identity">
+                        <p className="page-shell__eyebrow">SLA {index + 1}</p>
+                        <input
+                          className="rule-title-input"
+                          value={rule.note}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))}
+                          placeholder="Kural notu"
+                        />
+                      </div>
+                      <label className="toggle-cell">
+                        <input
+                          type="checkbox"
+                          checked={rule.isActive}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, isActive: event.target.checked } : item))}
+                        />
+                        <span>{rule.isActive ? "Aktif" : "Pasif"}</span>
+                      </label>
+                    </div>
+                    <div className="rule-card-grid">
+                      <FormField label="Workflow Template">
+                        <input
+                          value={rule.workflowTemplateId}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, workflowTemplateId: event.target.value } : item))}
+                          placeholder="template-production-flow"
+                        />
+                      </FormField>
+                      <FormField label="Workflow Adi Deseni">
+                        <input
+                          value={rule.workflowNamePattern}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, workflowNamePattern: event.target.value } : item))}
+                          placeholder="Uretim"
+                        />
+                      </FormField>
+                      <FormField label="Adim Adi Deseni">
+                        <input
+                          value={rule.stepNamePattern}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, stepNamePattern: event.target.value } : item))}
+                          placeholder="Kalite Kontrol"
+                        />
+                      </FormField>
+                      <FormField label="Hedef Sure (saat)">
+                        <input
+                          type="number"
+                          value={rule.targetHours}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, targetHours: Number(event.target.value || 0) } : item))}
+                        />
+                      </FormField>
+                      <FormField label="Uyari Esigi (saat)">
+                        <input
+                          type="number"
+                          value={rule.warningHours}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, warningHours: Number(event.target.value || 0) } : item))}
+                        />
+                      </FormField>
+                      <FormField label="Oncelik">
+                        <input
+                          type="number"
+                          value={rule.priority}
+                          onChange={(event) => setWorkflowSlaDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, priority: Number(event.target.value || 0) } : item))}
+                        />
+                      </FormField>
+                    </div>
+                    <div className="form-actions">
+                      <button type="button" onClick={() => setWorkflowSlaDraft((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                        Sil
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {workflowSlaDraft.length === 0 ? <div className="empty-state">SLA kurali yok.</div> : null}
+              </div>
+            </article>
+          </div>
+        </SectionCard>
 
         <SectionCard
           title="Parca Override Kurallari"

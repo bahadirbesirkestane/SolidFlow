@@ -6,6 +6,8 @@ import {
   listProjects,
   type ProjectDashboard,
 } from "@/entities/operations/api/operations-api";
+import { getAssignmentRules } from "@/entities/rules/api/rules-api";
+import { resolveWorkflowStepWarning } from "@/entities/rules/lib/sla-utils";
 
 export function useDashboardPageData() {
   const projectsQuery = useQuery({
@@ -16,6 +18,10 @@ export function useDashboardPageData() {
   const openJobsQuery = useQuery({
     queryKey: ["dashboard", "openJobs"],
     queryFn: listOpenJobs,
+  });
+  const assignmentRulesQuery = useQuery({
+    queryKey: ["dashboard", "assignmentRules"],
+    queryFn: getAssignmentRules,
   });
 
   const dashboardQueries = useQueries({
@@ -35,6 +41,38 @@ export function useDashboardPageData() {
     () => dashboards.flatMap((dashboard) => dashboard.workflows.flatMap((workflow) => workflow.steps || [])),
     [dashboards],
   );
+  const workflowWarnings = useMemo(
+    () =>
+      dashboards.flatMap((dashboard) =>
+        dashboard.workflows.flatMap((workflow) => {
+          const currentStep = workflow.currentStep;
+          if (!currentStep || (currentStep.status !== "ready" && currentStep.status !== "in_progress")) {
+            return [];
+          }
+
+          const slaWarning = resolveWorkflowStepWarning(
+            workflow,
+            currentStep,
+            assignmentRulesQuery.data?.workflowSlaRules || [],
+          );
+
+          if (!slaWarning.isWarning) {
+            return [];
+          }
+
+          return [{
+            projectId: dashboard.project.id,
+            projectCode: dashboard.project.code,
+            projectName: dashboard.project.name,
+            workflowName: workflow.name,
+            stepName: currentStep.name,
+            elapsedHours: slaWarning.elapsedHours,
+            warningHours: slaWarning.warningHours,
+          }];
+        }),
+      ),
+    [assignmentRulesQuery.data?.workflowSlaRules, dashboards],
+  );
 
   const summary = useMemo(() => {
     const workflows = dashboards.flatMap((dashboard) => dashboard.workflows || []);
@@ -45,8 +83,9 @@ export function useDashboardPageData() {
       readyStepCount: steps.filter((step) => step.status === "ready").length,
       inProgressStepCount: steps.filter((step) => step.status === "in_progress").length,
       openJobCount: (openJobsQuery.data || []).length,
+      warningWorkflowCount: workflowWarnings.length,
     };
-  }, [dashboards, openJobsQuery.data, steps]);
+  }, [dashboards, openJobsQuery.data, steps, workflowWarnings.length]);
 
   const stageBoard = useMemo(() => {
     const counts = new Map<string, number>();
@@ -73,6 +112,13 @@ export function useDashboardPageData() {
       });
     }
 
+    workflowWarnings.slice(0, 4).forEach((warning) => {
+      items.push({
+        title: `${warning.projectCode} SLA riski`,
+        body: `${warning.workflowName} / ${warning.stepName} ${warning.elapsedHours} sa oldu. Uyari esigi ${warning.warningHours} sa.`,
+      });
+    });
+
     dashboards
       .filter((dashboard) => Number(dashboard.progress?.completionPercentage || 0) < 100)
       .slice(0, 4)
@@ -85,12 +131,17 @@ export function useDashboardPageData() {
       });
 
     return items;
-  }, [dashboards, openJobsQuery.data]);
+  }, [dashboards, openJobsQuery.data, workflowWarnings]);
 
-  const isLoading = projectsQuery.isLoading || openJobsQuery.isLoading || dashboardQueries.some((query) => query.isLoading);
+  const isLoading =
+    projectsQuery.isLoading ||
+    openJobsQuery.isLoading ||
+    assignmentRulesQuery.isLoading ||
+    dashboardQueries.some((query) => query.isLoading);
   const error =
     projectsQuery.error ||
     openJobsQuery.error ||
+    assignmentRulesQuery.error ||
     dashboardQueries.find((query) => query.error)?.error ||
     null;
 
@@ -98,6 +149,7 @@ export function useDashboardPageData() {
     await Promise.all([
       projectsQuery.refetch(),
       openJobsQuery.refetch(),
+      assignmentRulesQuery.refetch(),
       ...dashboardQueries.map((query) => query.refetch()),
     ]);
   }
@@ -107,6 +159,7 @@ export function useDashboardPageData() {
     summary,
     stageBoard,
     attentionItems,
+    workflowWarnings,
     openJobs: openJobsQuery.data || [],
     isLoading,
     error,

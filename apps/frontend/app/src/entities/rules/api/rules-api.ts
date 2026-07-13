@@ -82,6 +82,29 @@ export type RuleResolverConfig = {
   };
 };
 
+export type DepartmentMappingRule = {
+  departmentId: string;
+  departmentName: string;
+  aliases: string[];
+};
+
+export type WorkflowSlaRule = {
+  id: string;
+  workflowTemplateId: string;
+  workflowNamePattern: string;
+  stepNamePattern: string;
+  targetHours: number;
+  warningHours: number;
+  priority: number;
+  note: string;
+  isActive: boolean;
+};
+
+export type AssignmentRulesConfig = {
+  departmentMappings: DepartmentMappingRule[];
+  workflowSlaRules: WorkflowSlaRule[];
+};
+
 export function listFileTypeRules() {
   return apiRequest<FileTypeRule[]>("/api/config/file-types");
 }
@@ -128,4 +151,15 @@ export function savePartOverrides(payload: PartOverride[]) {
 
 export function getRuleResolverConfig() {
   return apiRequest<RuleResolverConfig>("/api/config/rule-resolver");
+}
+
+export function getAssignmentRules() {
+  return apiRequest<AssignmentRulesConfig>("/api/config/assignment-rules");
+}
+
+export function saveAssignmentRules(payload: AssignmentRulesConfig) {
+  return apiRequest<AssignmentRulesConfig>("/api/config/assignment-rules", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }

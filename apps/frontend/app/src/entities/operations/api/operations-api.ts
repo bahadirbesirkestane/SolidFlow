@@ -131,6 +131,7 @@ export type WorkflowStep = {
   handoverTo?: string;
   approvedBy?: string;
   completionNote?: string;
+  createdAt?: string;
   completedAt?: string;
   updatedAt?: string;
 };

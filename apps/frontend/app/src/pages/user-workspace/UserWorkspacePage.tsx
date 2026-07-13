@@ -284,6 +284,10 @@ export function UserWorkspacePage() {
             <strong>{summary.delegatedCount}</strong>
           </article>
           <article className="metric-panel">
+            <span>SLA Riski</span>
+            <strong>{summary.warningCount}</strong>
+          </article>
+          <article className="metric-panel">
             <span>Son Hareket</span>
             <strong>{formatDate(summary.lastUpdated)}</strong>
           </article>
@@ -334,6 +338,12 @@ export function UserWorkspacePage() {
                     </div>
                   </div>
 
+                  {item.slaWarning.isWarning ? (
+                    <StatusBanner tone="danger">
+                      SLA uyarisi: {formatHour(item.slaWarning.elapsedHours)} gecti. Uyari esigi {formatHour(item.slaWarning.warningHours)}.
+                    </StatusBanner>
+                  ) : null}
+
                   <div className="rules-three-column">
                     <div className="simple-list-card">
                       <strong>Adim</strong>
@@ -341,6 +351,13 @@ export function UserWorkspacePage() {
                         {item.step.sequenceNo}. {item.step.name}
                       </p>
                       <small>{item.step.description || "Aciklama girilmemis."}</small>
+                    </div>
+                    <div className="simple-list-card">
+                      <strong>SLA Durumu</strong>
+                      <p>{item.slaWarning.isWarning ? "Riskte" : "Normal"}</p>
+                      <small>
+                        Hedef {formatHour(item.slaWarning.targetHours)} | Uyari {formatHour(item.slaWarning.warningHours)}
+                      </small>
                     </div>
                     <div className="simple-list-card">
                       <strong>Durum Notu</strong>
@@ -451,4 +468,12 @@ export function UserWorkspacePage() {
       </SectionCard>
     </PageShell>
   );
+}
+
+function formatHour(value?: number) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${Math.round((Number(value) || 0) * 10) / 10} sa`;
 }

@@ -17,6 +17,7 @@ test("performance profile stays explainable and keeps blocked work neutral", () 
       {
         stepName: "Kalite Kontrol",
         workflowName: "WF-1",
+        workflowTemplateId: "template-quality",
         createdAt: "2026-07-10T08:00:00.000Z",
         completedAt: "2026-07-10T12:00:00.000Z",
         handoverTo: "",
@@ -32,6 +33,15 @@ test("performance profile stays explainable and keeps blocked work neutral", () 
     manualAdjustments: [
       { delta: 3 },
     ],
+    slaRules: [
+      {
+        workflowTemplateId: "template-quality",
+        stepNamePattern: "Kalite",
+        targetHours: 5,
+        priority: 10,
+        isActive: true,
+      },
+    ],
   });
 
   assert.equal(profile.metrics.blockedActiveCount, 1);
@@ -39,6 +49,7 @@ test("performance profile stays explainable and keeps blocked work neutral", () 
   assert.equal(profile.score.manualAdjustmentTotal, 3);
   assert.ok(profile.score.total >= profile.score.base);
   assert.ok(Array.isArray(profile.score.positiveReasons));
+  assert.equal(profile.metrics.averageTargetHours, 5);
 });
 
 test("blocked note parser extracts code and note", () => {

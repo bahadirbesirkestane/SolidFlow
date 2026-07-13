@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSession } from "@/entities/auth/hooks/useAuthSession";
+import { getAssignmentRules, type WorkflowSlaRule } from "@/entities/rules/api/rules-api";
+import { resolveWorkflowStepWarning, type SlaWarningState } from "@/entities/rules/lib/sla-utils";
 import {
   advanceWorkflowInstance,
   getProjectDashboard,
@@ -25,6 +27,7 @@ type UserWorkItem = {
   workflow: WorkflowInstance;
   step: WorkflowStep;
   nextStep: WorkflowStep | null;
+  slaWarning: SlaWarningState;
 };
 
 export function useUserWorkspaceData() {
@@ -47,6 +50,10 @@ export function useUserWorkspaceData() {
     queryKey: ["userWorkspace", "users"],
     queryFn: listUsers,
   });
+  const assignmentRulesQuery = useQuery({
+    queryKey: ["userWorkspace", "assignmentRules"],
+    queryFn: getAssignmentRules,
+  });
 
   const dashboardQueries = useQueries({
     queries: (projectsQuery.data || []).map((project) => ({
@@ -67,8 +74,14 @@ export function useUserWorkspaceData() {
   );
 
   const categorizedItems = useMemo(
-    () => collectUserWorkItems(selectedUserId, selectedUser, dashboards),
-    [dashboards, selectedUser, selectedUserId],
+    () =>
+      collectUserWorkItems(
+        selectedUserId,
+        selectedUser,
+        dashboards,
+        assignmentRulesQuery.data?.workflowSlaRules || [],
+      ),
+    [assignmentRulesQuery.data?.workflowSlaRules, dashboards, selectedUser, selectedUserId],
   );
 
   const summary = useMemo(() => {
@@ -92,6 +105,7 @@ export function useUserWorkspaceData() {
       blockedCount: categorizedItems.blockedItems.length,
       completedCount: categorizedItems.completedItems.length,
       delegatedCount: categorizedItems.delegatedItems.length,
+      warningCount: categorizedItems.activeItems.filter((item) => item.slaWarning.isWarning).length,
       lastUpdated,
     };
   }, [categorizedItems]);
@@ -147,11 +161,13 @@ export function useUserWorkspaceData() {
     authQuery.isLoading ||
     projectsQuery.isLoading ||
     usersQuery.isLoading ||
+    assignmentRulesQuery.isLoading ||
     dashboardQueries.some((query) => query.isLoading);
   const error =
     authQuery.error ||
     projectsQuery.error ||
     usersQuery.error ||
+    assignmentRulesQuery.error ||
     dashboardQueries.find((query) => query.error)?.error ||
     null;
 
@@ -160,6 +176,7 @@ export function useUserWorkspaceData() {
       authQuery.refetch(),
       projectsQuery.refetch(),
       usersQuery.refetch(),
+      assignmentRulesQuery.refetch(),
       ...dashboardQueries.map((query) => query.refetch()),
     ]);
   }
@@ -188,6 +205,7 @@ function collectUserWorkItems(
   userId: string,
   selectedUser: UserRecord | null,
   dashboards: ProjectDashboard[],
+  workflowSlaRules: WorkflowSlaRule[],
 ) {
   const emptyState = {
     activeItems: [] as UserWorkItem[],
@@ -219,6 +237,7 @@ function collectUserWorkItems(
             workflow,
             step,
             nextStep: workflow.steps.find((candidate) => candidate.sequenceNo > step.sequenceNo) || null,
+            slaWarning: resolveWorkflowStepWarning(workflow, step, workflowSlaRules),
           };
 
           if ((step.status === "ready" || step.status === "in_progress") && isBlockedStep(step)) {

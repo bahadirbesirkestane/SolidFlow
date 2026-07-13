@@ -5,7 +5,7 @@ import { SectionCard } from "@/shared/ui/SectionCard";
 import { StatusBanner } from "@/shared/ui/StatusBanner";
 
 export function DashboardPage() {
-  const { dashboards, summary, stageBoard, attentionItems, openJobs, isLoading, error, refresh } = useDashboardPageData();
+  const { dashboards, summary, stageBoard, attentionItems, workflowWarnings, openJobs, isLoading, error, refresh } = useDashboardPageData();
 
   return (
     <PageShell
@@ -44,6 +44,10 @@ export function DashboardPage() {
           <article className="metric-panel">
             <span>Acik Is</span>
             <strong>{summary.openJobCount}</strong>
+          </article>
+          <article className="metric-panel">
+            <span>SLA Riski</span>
+            <strong>{summary.warningWorkflowCount}</strong>
           </article>
         </div>
       </SectionCard>
@@ -85,6 +89,40 @@ export function DashboardPage() {
           </div>
         </SectionCard>
       </div>
+
+      <SectionCard title="SLA Uyari Listesi" description="warningHours esigini gecen aktif adimlar burada toplanir.">
+        <DataTable
+          rows={workflowWarnings}
+          columns={[
+            {
+              key: "project",
+              header: "Proje",
+              render: (item) => (
+                <div className="stack-list stack-list--compact">
+                  <strong>{item.projectCode}</strong>
+                  <span>{item.projectName}</span>
+                </div>
+              ),
+            },
+            {
+              key: "workflow",
+              header: "Workflow / Adim",
+              render: (item) => `${item.workflowName} / ${item.stepName}`,
+            },
+            {
+              key: "elapsed",
+              header: "Gecen Sure",
+              render: (item) => `${item.elapsedHours} sa`,
+            },
+            {
+              key: "threshold",
+              header: "Uyari Esigi",
+              render: (item) => `${item.warningHours} sa`,
+            },
+          ]}
+          emptyText={isLoading ? "SLA uyarilari yukleniyor..." : "warningHours esigini gecen aktif adim yok."}
+        />
+      </SectionCard>
 
       <SectionCard title="Proje Takip Tablosu" description="Proje bazinda ilerleme, aktif akis ve acik is gorunumu.">
         <DataTable

@@ -230,7 +230,12 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     createUser: new CreateUserUseCase({ userRepository, passwordHasher, auditLogRepository }),
     deactivateUser: new DeactivateUserUseCase({ userRepository, auditLogRepository }),
     updateUser: new UpdateUserUseCase({ userRepository, passwordHasher, auditLogRepository }),
-    getUserProfile: new GetUserProfileUseCase({ userRepository, workflowInstanceRepository, auditLogRepository }),
+    getUserProfile: new GetUserProfileUseCase({
+      userRepository,
+      workflowInstanceRepository,
+      auditLogRepository,
+      assignmentRuleRepository,
+    }),
     adjustUserScore: new AdjustUserScoreUseCase({ userRepository, auditLogRepository }),
     login: new LoginUseCase({
       userRepository,
