@@ -8,6 +8,7 @@ class AdvanceWorkflowInstanceUseCase {
   async execute(instanceId, input) {
     const updatedInstance = await this.workflowInstanceRepository.advanceCurrentStep(instanceId, {
       completedBy: String(input.completedBy || "").trim(),
+      completedByUserId: String(input.completedByUserId || "").trim(),
       note: String(input.note || "").trim(),
       handoverTo: String(input.handoverTo || "").trim(),
       nextAssignee: String(input.nextAssignee || "").trim(),
@@ -23,6 +24,7 @@ class AdvanceWorkflowInstanceUseCase {
     await this.projectRepository.touch(updatedInstance.projectId);
     await this.auditLogRepository.log({
       projectId: updatedInstance.projectId,
+      actorUserId: String(input.completedByUserId || "").trim(),
       entityType: "workflow_instance",
       entityId: instanceId,
       action: "advanced",

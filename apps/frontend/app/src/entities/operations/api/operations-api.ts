@@ -79,7 +79,10 @@ export type WorkflowStep = {
   assigneeIds: string[];
   assignee?: string;
   description?: string;
+  handoverTo?: string;
+  approvedBy?: string;
   completionNote?: string;
+  completedAt?: string;
   updatedAt?: string;
 };
 
@@ -201,6 +204,7 @@ export function advanceWorkflowInstance(
   instanceId: string,
   payload: {
     completedBy: string;
+    completedByUserId?: string;
     note: string;
     handoverTo?: string;
     nextAssigneeIds?: string[];

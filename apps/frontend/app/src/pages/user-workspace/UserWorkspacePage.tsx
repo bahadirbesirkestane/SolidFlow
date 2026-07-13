@@ -1,5 +1,10 @@
-import { FormEvent, useState } from "react";
-import { useUserWorkspaceData } from "@/entities/user-workspace/hooks/useUserWorkspaceData";
+import { FormEvent, useMemo, useState } from "react";
+import {
+  buildBlockedNote,
+  clearBlockedNote,
+  isBlockedNote,
+  useUserWorkspaceData,
+} from "@/entities/user-workspace/hooks/useUserWorkspaceData";
 import { FormField } from "@/shared/ui/FormField";
 import { PageShell } from "@/shared/ui/PageShell";
 import { SectionCard } from "@/shared/ui/SectionCard";
@@ -10,18 +15,13 @@ const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   timeStyle: "short",
 });
 
-const actionOptions = [
-  "Onaylandi",
-  "Ic hizmete alindi",
-  "Dis hizmete gonderildi",
-  "Liste kontrol tamamlandi",
-  "Kalite kontrol tamamlandi",
-  "Bir sonraki adima devredildi",
-];
+type ActionMode = "approve" | "handover" | "block" | "unblock" | "note";
+type WorkspaceTab = "active" | "blocked" | "completed" | "delegated";
 
 type TaskActionFormState = Record<
   string,
   {
+    mode: ActionMode;
     note: string;
     nextAssigneeIds: string[];
   }
@@ -46,55 +46,147 @@ function formatTaskStatus(status: string) {
   if (status === "completed") {
     return "Tamamlandi";
   }
+  if (status === "pending") {
+    return "Beklemede";
+  }
   return status || "-";
+}
+
+function getActionLabel(mode: ActionMode, hasNextStep: boolean) {
+  if (mode === "approve") {
+    return hasNextStep ? "Onayla ve Devret" : "Isi Tamamla";
+  }
+  if (mode === "handover") {
+    return "Devret";
+  }
+  if (mode === "block") {
+    return "Bloke Et";
+  }
+  if (mode === "unblock") {
+    return "Blokeyi Kaldir";
+  }
+  return "Notu Kaydet";
+}
+
+function getActionHint(mode: ActionMode) {
+  if (mode === "approve") {
+    return "Adim tamamlanir ve varsa bir sonraki sorumlulara gecer.";
+  }
+  if (mode === "handover") {
+    return "Adim tamamlanir ve secilen kisi ya da kisilere devredilir.";
+  }
+  if (mode === "block") {
+    return "Kullanici disi engeller veya bekleme sebepleri not ile kayda alinir.";
+  }
+  if (mode === "unblock") {
+    return "Bloke kaydi temizlenir ve is ayni adimda devam eder.";
+  }
+  return "Ilerletmeden sadece aciklayici not guncellenir.";
 }
 
 export function UserWorkspacePage() {
   const {
+    authUser,
     selectedUserId,
     setSelectedUserId,
     selectedUser,
     users,
     departments,
-    workItems,
+    activeItems,
+    blockedItems,
+    completedItems,
+    delegatedItems,
     summary,
     isLoading,
     error,
     refresh,
     advanceTaskMutation,
+    updateTaskMutation,
   } = useUserWorkspaceData();
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("active");
   const [taskForms, setTaskForms] = useState<TaskActionFormState>({});
 
-  function getTaskForm(instanceId: string) {
-    return taskForms[instanceId] || {
-      note: actionOptions[0],
+  const visibleItems = useMemo(() => {
+    if (activeTab === "blocked") {
+      return blockedItems;
+    }
+    if (activeTab === "completed") {
+      return completedItems;
+    }
+    if (activeTab === "delegated") {
+      return delegatedItems;
+    }
+    return activeItems;
+  }, [activeItems, activeTab, blockedItems, completedItems, delegatedItems]);
+
+  function getTaskForm(stepId: string, workflowName: string) {
+    return taskForms[stepId] || {
+      mode: "approve",
+      note: `${workflowName} kontrol edildi`,
       nextAssigneeIds: [],
     };
   }
 
-  async function handleAdvanceTask(event: FormEvent<HTMLFormElement>, instanceId: string, nextStepRequired: boolean) {
+  function updateTaskForm(
+    stepId: string,
+    workflowName: string,
+    nextValue: Partial<TaskActionFormState[string]>,
+  ) {
+    setTaskForms((current) => ({
+      ...current,
+      [stepId]: {
+        ...getTaskForm(stepId, workflowName),
+        ...nextValue,
+      },
+    }));
+  }
+
+  async function handleTaskAction(event: FormEvent<HTMLFormElement>, item: (typeof visibleItems)[number]) {
     event.preventDefault();
 
     if (!selectedUser) {
       return;
     }
 
-    const formState = getTaskForm(instanceId);
-    if (nextStepRequired && formState.nextAssigneeIds.length === 0) {
+    const formState = getTaskForm(item.step.id, item.workflow.name);
+    const needsNextAssignee = formState.mode === "approve" || formState.mode === "handover";
+    if (needsNextAssignee && item.nextStep && formState.nextAssigneeIds.length === 0) {
       return;
     }
 
-    await advanceTaskMutation.mutateAsync({
-      instanceId,
-      completedBy: selectedUser.fullName,
-      note: formState.note,
-      nextAssigneeIds: formState.nextAssigneeIds,
-    });
+    if (formState.mode === "block") {
+      await updateTaskMutation.mutateAsync({
+        stepId: item.step.id,
+        status: item.step.status === "in_progress" ? "in_progress" : "ready",
+        note: buildBlockedNote(formState.note),
+      });
+    } else if (formState.mode === "unblock") {
+      await updateTaskMutation.mutateAsync({
+        stepId: item.step.id,
+        status: item.step.status === "in_progress" ? "in_progress" : "ready",
+        note: clearBlockedNote(item.step.completionNote || formState.note),
+      });
+    } else if (formState.mode === "note") {
+      await updateTaskMutation.mutateAsync({
+        stepId: item.step.id,
+        status: item.step.status === "in_progress" ? "in_progress" : "ready",
+        note: formState.note.trim(),
+      });
+    } else {
+      await advanceTaskMutation.mutateAsync({
+        instanceId: item.workflow.id,
+        completedBy: selectedUser.fullName,
+        completedByUserId: selectedUser.id,
+        note: formState.note.trim(),
+        nextAssigneeIds: item.nextStep ? formState.nextAssigneeIds : [],
+      });
+    }
 
     setTaskForms((current) => ({
       ...current,
-      [instanceId]: {
-        note: actionOptions[0],
+      [item.step.id]: {
+        mode: "approve",
+        note: `${item.workflow.name} kontrol edildi`,
         nextAssigneeIds: [],
       },
     }));
@@ -103,7 +195,7 @@ export function UserWorkspacePage() {
   return (
     <PageShell
       title="Kullanici Is Alani"
-      description="Kisi bazli hazir ve islemdeki adimlar tek ekranda toplanir; onay ve devir aksiyonu ayni karttan tamamlanir."
+      description="Kullanici kendi islerini ayni ekranda gorur, onaylar, devreder, bloke eder ve gecmis hareketlerini takip eder."
       actions={
         <button type="button" onClick={() => void refresh()}>
           Yenile
@@ -112,8 +204,9 @@ export function UserWorkspacePage() {
     >
       {error ? <StatusBanner tone="danger">{error.message}</StatusBanner> : null}
       {advanceTaskMutation.isError ? <StatusBanner tone="danger">{advanceTaskMutation.error.message}</StatusBanner> : null}
+      {updateTaskMutation.isError ? <StatusBanner tone="danger">{updateTaskMutation.error.message}</StatusBanner> : null}
 
-      <SectionCard title="Kullanici Secimi" description="Kullanici secildiginde aktif adimlar otomatik toplanir.">
+      <SectionCard title="Kullanici Secimi" description="Oturum acan kullanici varsayilan olarak secilir.">
         <div className="rules-two-column">
           <FormField label="Kullanici">
             <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>
@@ -135,21 +228,21 @@ export function UserWorkspacePage() {
           <div className="rules-insight-grid">
             <article className="workspace-panel">
               <div className="workspace-panel__header">
-                <strong>Otomatik Akis</strong>
+                <strong>Oturum Kullanici</strong>
               </div>
-              <p>Hazir ve islemde durumundaki adimlar secili kullaniciya gore ayni akista toplanir.</p>
+              <p>{authUser ? `${authUser.fullName} | ${authUser.role}` : "Oturum bilgisi yukleniyor."}</p>
             </article>
             <article className="workspace-panel">
               <div className="workspace-panel__header">
-                <strong>Hizli Devir</strong>
+                <strong>Gercek Senaryo</strong>
               </div>
-              <p>Bir adim tamamlandiginda sonraki sorumlular ayni karttan secilip devir kaydi acilir.</p>
+              <p>Onay, devir, bloke ve not akislari ayni shell uzerinden ilerler.</p>
             </article>
           </div>
         </div>
       </SectionCard>
 
-      <SectionCard title="Kullanici Ozeti" description="Secili kullanicinin aktif yuk ve devir durumu.">
+      <SectionCard title="Kullanici Ozeti" description="Secili kullanicinin anlik is yuk durumu.">
         <div className="rules-metric-grid">
           <article className="metric-panel metric-panel--accent">
             <span>Secili Kullanici</span>
@@ -157,7 +250,7 @@ export function UserWorkspacePage() {
           </article>
           <article className="metric-panel">
             <span>Aktif Is</span>
-            <strong>{summary.total}</strong>
+            <strong>{summary.totalActive}</strong>
           </article>
           <article className="metric-panel">
             <span>Hazir Is</span>
@@ -168,8 +261,16 @@ export function UserWorkspacePage() {
             <strong>{summary.inProgressCount}</strong>
           </article>
           <article className="metric-panel">
-            <span>Devir Bekleyen</span>
-            <strong>{summary.handoverCount}</strong>
+            <span>Blokeli</span>
+            <strong>{summary.blockedCount}</strong>
+          </article>
+          <article className="metric-panel">
+            <span>Tamamlanan</span>
+            <strong>{summary.completedCount}</strong>
+          </article>
+          <article className="metric-panel">
+            <span>Devrettiklerim</span>
+            <strong>{summary.delegatedCount}</strong>
           </article>
           <article className="metric-panel">
             <span>Son Hareket</span>
@@ -178,18 +279,36 @@ export function UserWorkspacePage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Atanmis Aktif Isler" description="Hazir veya islemde olan kullanici adimlari.">
+      <SectionCard title="Is Listeleri" description="Aktif, blokeli, tamamlanan ve devredilen isler tek duzende toplanir.">
+        <div className="section-card__action-row">
+          <button type="button" className={activeTab === "active" ? "is-active" : ""} onClick={() => setActiveTab("active")}>
+            Aktif Isler ({activeItems.length})
+          </button>
+          <button type="button" className={activeTab === "blocked" ? "is-active" : ""} onClick={() => setActiveTab("blocked")}>
+            Blokeliler ({blockedItems.length})
+          </button>
+          <button type="button" className={activeTab === "completed" ? "is-active" : ""} onClick={() => setActiveTab("completed")}>
+            Gecmis Isler ({completedItems.length})
+          </button>
+          <button type="button" className={activeTab === "delegated" ? "is-active" : ""} onClick={() => setActiveTab("delegated")}>
+            Devrettiklerim ({delegatedItems.length})
+          </button>
+        </div>
+
         <div className="stack-list">
           {!selectedUserId ? (
-            <div className="empty-state">Kullanici secildiginde aktif isler burada acilir.</div>
-          ) : workItems.length === 0 && !isLoading ? (
-            <div className="empty-state">Secili kullanici icin atanmis aktif is bulunmuyor.</div>
+            <div className="empty-state">Kullanici secildiginde is listesi burada acilir.</div>
+          ) : visibleItems.length === 0 && !isLoading ? (
+            <div className="empty-state">Bu gorunum icin kayit bulunmuyor.</div>
           ) : (
-            workItems.map((item) => {
-              const formState = getTaskForm(item.workflow.id);
+            visibleItems.map((item) => {
+              const formState = getTaskForm(item.step.id, item.workflow.name);
               const nextAssigneeIds = item.nextStep?.assigneeIds || [];
+              const isHistoryView = activeTab === "completed" || activeTab === "delegated";
+              const blocked = isBlockedNote(item.step.completionNote);
+
               return (
-                <article key={item.workflow.id} className="workspace-panel">
+                <article key={`${item.workflow.id}-${item.step.id}`} className="workspace-panel">
                   <div className="workspace-panel__header">
                     <div className="stack-list stack-list--compact">
                       <strong>{item.workflow.name}</strong>
@@ -199,97 +318,106 @@ export function UserWorkspacePage() {
                       <small>{item.workflow.itemLabel || item.workflow.templateName || "Genel is akisi"}</small>
                     </div>
                     <div className="inline-meta">
-                      <span>{formatTaskStatus(item.currentStep.status)}</span>
+                      <span>{formatTaskStatus(item.step.status)}</span>
                       <strong>%{item.workflow.progressPercent}</strong>
                     </div>
                   </div>
 
                   <div className="rules-three-column">
                     <div className="simple-list-card">
-                      <strong>Aktif Adim</strong>
+                      <strong>Adim</strong>
                       <p>
-                        {item.currentStep.sequenceNo}. {item.currentStep.name}
+                        {item.step.sequenceNo}. {item.step.name}
                       </p>
-                      <small>{item.currentStep.description || "Aciklama girilmemis."}</small>
+                      <small>{item.step.description || "Aciklama girilmemis."}</small>
                     </div>
                     <div className="simple-list-card">
-                      <strong>Parca / Kalem</strong>
-                      <p>{item.workflow.itemLabel || item.workflow.name}</p>
-                      <small>{item.workflow.itemCount ? `${item.workflow.itemCount} adet` : "Adet bilgisi yok"}</small>
+                      <strong>Durum Notu</strong>
+                      <p>{blocked ? "Bloke kaydi var" : item.step.completionNote || "Not girilmemis"}</p>
+                      <small>
+                        {blocked ? clearBlockedNote(item.step.completionNote || "") || "Sebep belirtilmedi" : formatDate(item.step.updatedAt)}
+                      </small>
                     </div>
                     <div className="simple-list-card">
                       <strong>Sonraki Adim</strong>
                       <p>
                         {item.nextStep ? `${item.nextStep.sequenceNo}. ${item.nextStep.name}` : "Akis tamamlanacak"}
                       </p>
-                      <small>
-                        {item.nextStep?.description || "Bu onay sonrasi akis tamamlanir ya da bir sonraki sorumluya devrolur."}
-                      </small>
+                      <small>{item.step.handoverTo || item.step.approvedBy || "Devir bilgisi yok"}</small>
                     </div>
                   </div>
 
-                  <form className="form-grid" onSubmit={(event) => void handleAdvanceTask(event, item.workflow.id, Boolean(item.nextStep))}>
-                    <FormField label="Yapilan Islem">
-                      <select
-                        value={formState.note}
-                        onChange={(event) =>
-                          setTaskForms((current) => ({
-                            ...current,
-                            [item.workflow.id]: {
-                              ...getTaskForm(item.workflow.id),
-                              note: event.target.value,
-                            },
-                          }))
-                        }
-                      >
-                        {actionOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </FormField>
-
-                    <FormField label="Sonraki Sorumlular" hint={item.nextStep ? "Birden fazla secim yapabilirsin." : "Bu akisin sonraki adimi yok."}>
-                      <select
-                        multiple
-                        size={4}
-                        disabled={!item.nextStep}
-                        value={formState.nextAssigneeIds}
-                        onChange={(event) => {
-                          const values = Array.from(event.target.selectedOptions).map((option) => option.value);
-                          setTaskForms((current) => ({
-                            ...current,
-                            [item.workflow.id]: {
-                              ...getTaskForm(item.workflow.id),
-                              nextAssigneeIds: values,
-                            },
-                          }));
-                        }}
-                      >
-                        {users
-                          .filter((user) => nextAssigneeIds.includes(user.id))
-                          .map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.fullName}
-                            </option>
-                          ))}
-                      </select>
-                    </FormField>
-
-                    <div className="form-actions">
-                      <button
-                        type="submit"
-                        disabled={advanceTaskMutation.isPending || (Boolean(item.nextStep) && formState.nextAssigneeIds.length === 0)}
-                      >
-                        {advanceTaskMutation.isPending
-                          ? "Isleniyor..."
-                          : item.nextStep
-                            ? "Onayla ve Devret"
-                            : "Isi Tamamla"}
-                      </button>
+                  {isHistoryView ? (
+                    <div className="info-strip">
+                      <strong>Tamamlayan:</strong>
+                      <span>{item.step.approvedBy || "-"}</span>
+                      <strong>Tarih:</strong>
+                      <span>{formatDate(item.step.completedAt || item.step.updatedAt)}</span>
                     </div>
-                  </form>
+                  ) : (
+                    <form className="form-grid" onSubmit={(event) => void handleTaskAction(event, item)}>
+                      <FormField label="Yapilacak Islem" hint={getActionHint(formState.mode)}>
+                        <select
+                          value={formState.mode}
+                          onChange={(event) => updateTaskForm(item.step.id, item.workflow.name, { mode: event.target.value as ActionMode })}
+                        >
+                          <option value="approve">Onayla</option>
+                          {item.nextStep ? <option value="handover">Devret</option> : null}
+                          <option value="block">Bloke Et</option>
+                          {blocked ? <option value="unblock">Blokeyi Kaldir</option> : null}
+                          <option value="note">Not Ekle</option>
+                        </select>
+                      </FormField>
+
+                      <FormField label="Not">
+                        <input
+                          value={formState.note}
+                          onChange={(event) => updateTaskForm(item.step.id, item.workflow.name, { note: event.target.value })}
+                          placeholder="Aciklayici not"
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Sonraki Sorumlular"
+                        hint={item.nextStep ? "Devir ve onay akisi icin secim yap." : "Bu adimdan sonra akis tamamlanir."}
+                      >
+                        <select
+                          multiple
+                          size={4}
+                          disabled={!item.nextStep || (formState.mode !== "approve" && formState.mode !== "handover")}
+                          value={formState.nextAssigneeIds}
+                          onChange={(event) => {
+                            const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                            updateTaskForm(item.step.id, item.workflow.name, { nextAssigneeIds: values });
+                          }}
+                        >
+                          {users
+                            .filter((user) => nextAssigneeIds.includes(user.id))
+                            .map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {user.fullName}
+                              </option>
+                            ))}
+                        </select>
+                      </FormField>
+
+                      <div className="form-actions">
+                        <button
+                          type="submit"
+                          disabled={
+                            advanceTaskMutation.isPending ||
+                            updateTaskMutation.isPending ||
+                            (((formState.mode === "approve" || formState.mode === "handover") && Boolean(item.nextStep)) &&
+                              formState.nextAssigneeIds.length === 0)
+                          }
+                        >
+                          {advanceTaskMutation.isPending || updateTaskMutation.isPending
+                            ? "Isleniyor..."
+                            : getActionLabel(formState.mode, Boolean(item.nextStep))}
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </article>
               );
             })

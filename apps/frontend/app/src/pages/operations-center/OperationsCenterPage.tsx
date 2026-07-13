@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useOperationsPageData } from "@/entities/operations/hooks/useOperationsPageData";
 import { deleteWorkflowInstance, updateWorkflowStep, type WorkflowInstance } from "@/entities/operations/api/operations-api";
@@ -8,7 +9,6 @@ import { PageShell } from "@/shared/ui/PageShell";
 import { SectionCard } from "@/shared/ui/SectionCard";
 import { SplitLayout } from "@/shared/ui/SplitLayout";
 import { StatusBanner } from "@/shared/ui/StatusBanner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   dateStyle: "short",
@@ -73,6 +73,7 @@ export function OperationsCenterPage() {
     workspaceMetrics,
   } = useOperationsPageData();
   const [drawerMode, setDrawerMode] = useState<"jobs" | "audit" | null>(null);
+  const [workflowFilter, setWorkflowFilter] = useState<"active" | "completed" | "all">("active");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
   const [workflowEditor, setWorkflowEditor] = useState({
     status: "ready",
@@ -96,7 +97,18 @@ export function OperationsCenterPage() {
 
   const recentJobs = useMemo(() => projectOpenJobs.slice(0, 5), [projectOpenJobs]);
   const recentAuditEvents = useMemo(() => auditEvents.slice(0, 6), [auditEvents]);
-  const workflows = projectDashboardQuery.data?.workflows || [];
+  const workflows = useMemo(() => projectDashboardQuery.data?.workflows || [], [projectDashboardQuery.data?.workflows]);
+  const filteredWorkflows = useMemo(() => {
+    if (workflowFilter === "completed") {
+      return workflows.filter((workflow) => workflow.status === "completed");
+    }
+
+    if (workflowFilter === "all") {
+      return workflows;
+    }
+
+    return workflows.filter((workflow) => workflow.status !== "completed");
+  }, [workflowFilter, workflows]);
   const selectedWorkflow = workflows.find((workflow) => workflow.id === selectedWorkflowId) || null;
   const selectedWorkflowCurrentStep = selectedWorkflow?.currentStep || null;
   const workflowAuditEvents = useMemo(() => {
@@ -218,16 +230,16 @@ export function OperationsCenterPage() {
       ) : null}
 
       <SplitLayout
-        rail={
+        rail={(
           <>
             <SectionCard
               title="Proje Havuzu"
               description={`${projectsQuery.data?.length || 0} aktif proje`}
-              actions={
+              actions={(
                 <button type="button" onClick={() => void refreshWorkspace()}>
                   Listeyi Yenile
                 </button>
-              }
+              )}
             >
               <div className="stack-list">
                 {(projectsQuery.data || []).map((project) => (
@@ -292,7 +304,7 @@ export function OperationsCenterPage() {
               </div>
             </SectionCard>
           </>
-        }
+        )}
       >
         <div className="operations-grid">
           <div className="operations-grid__top">
@@ -393,7 +405,7 @@ export function OperationsCenterPage() {
           <SectionCard
             title="Secili Proje Calisma Alani"
             description="Bu blok her zaman alt sirada ve tam genislikte kalir. Workflow ozetleri, acik isler ve audit kayitlari tek operasyon gorunumunde birlesir."
-            actions={
+            actions={(
               <>
                 <button type="button" onClick={() => setDrawerMode("jobs")}>
                   Tum Acik Isler
@@ -402,7 +414,7 @@ export function OperationsCenterPage() {
                   Tum Audit Kayitlari
                 </button>
               </>
-            }
+            )}
           >
             {projectDashboardQuery.isLoading ? (
               <div className="empty-state">Secili proje yukleniyor...</div>
@@ -451,9 +463,20 @@ export function OperationsCenterPage() {
                           <h3>Workflow Ozeti</h3>
                           <p>Secili projedeki tum akislarin ilerleme ve siradaki adim bilgisi</p>
                         </div>
+                        <div className="section-card__action-row">
+                          <button type="button" className={workflowFilter === "active" ? "is-active" : ""} onClick={() => setWorkflowFilter("active")}>
+                            Aktif
+                          </button>
+                          <button type="button" className={workflowFilter === "completed" ? "is-active" : ""} onClick={() => setWorkflowFilter("completed")}>
+                            Tamamlanan
+                          </button>
+                          <button type="button" className={workflowFilter === "all" ? "is-active" : ""} onClick={() => setWorkflowFilter("all")}>
+                            Tum Liste
+                          </button>
+                        </div>
                       </div>
 
-                      {workflows.length > 0 ? (
+                      {filteredWorkflows.length > 0 ? (
                         <div className="data-table">
                           <table className="workflow-list-table">
                             <thead>
@@ -468,7 +491,7 @@ export function OperationsCenterPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {workflows.map((workflow) => {
+                              {filteredWorkflows.map((workflow) => {
                                 const currentStep = workflow.currentStep;
                                 const assigneeNames = (currentStep?.assigneeIds || [])
                                   .map((userId) => activeUsers.find((user) => user.id === userId)?.fullName || userId)
@@ -491,7 +514,7 @@ export function OperationsCenterPage() {
                                     <td>
                                       <div className="table-action-row" onClick={(event) => event.stopPropagation()}>
                                         <button type="button" className="icon-button" title="Duzenle" onClick={() => openWorkflowDetail(workflow)}>
-                                          ✎
+                                          Duzenle
                                         </button>
                                         <button
                                           type="button"
@@ -504,7 +527,7 @@ export function OperationsCenterPage() {
                                           }}
                                           disabled={deleteWorkflowMutation.isPending}
                                         >
-                                          🗑
+                                          Sil
                                         </button>
                                       </div>
                                     </td>
@@ -515,7 +538,7 @@ export function OperationsCenterPage() {
                           </table>
                         </div>
                       ) : (
-                        <div className="empty-state">Bu projede henuz workflow yok.</div>
+                        <div className="empty-state">Bu filtre icin workflow bulunmuyor.</div>
                       )}
                     </section>
 

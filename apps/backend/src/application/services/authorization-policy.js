@@ -92,7 +92,7 @@ function resolveAllowedRoles(method, pathname) {
   }
 
   if (pathname.startsWith("/api/operations/workflow-instance-steps/") && method === "PATCH") {
-    return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
+    return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER, AUTH_ROLES.WORKER];
   }
 
   return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER, AUTH_ROLES.WORKER];
