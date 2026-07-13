@@ -28,6 +28,7 @@ const { GetCurrentAuthSessionUseCase } = require("./application/use-cases/get-cu
 const { ResolveAuthContextUseCase } = require("./application/use-cases/resolve-auth-context-use-case");
 const { UpdateUserUseCase } = require("./application/use-cases/update-user-use-case");
 const { GetUserProfileUseCase } = require("./application/use-cases/get-user-profile-use-case");
+const { AdjustUserScoreUseCase } = require("./application/use-cases/adjust-user-score-use-case");
 const { ListOpenJobsUseCase } = require("./application/use-cases/list-open-jobs-use-case");
 const { ListProjectAuditEventsUseCase } = require("./application/use-cases/list-project-audit-events-use-case");
 const { UpdateWorkflowStepUseCase } = require("./application/use-cases/update-workflow-step-use-case");
@@ -229,7 +230,8 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     createUser: new CreateUserUseCase({ userRepository, passwordHasher, auditLogRepository }),
     deactivateUser: new DeactivateUserUseCase({ userRepository, auditLogRepository }),
     updateUser: new UpdateUserUseCase({ userRepository, passwordHasher, auditLogRepository }),
-    getUserProfile: new GetUserProfileUseCase({ userRepository, workflowInstanceRepository }),
+    getUserProfile: new GetUserProfileUseCase({ userRepository, workflowInstanceRepository, auditLogRepository }),
+    adjustUserScore: new AdjustUserScoreUseCase({ userRepository, auditLogRepository }),
     login: new LoginUseCase({
       userRepository,
       authSessionRepository,

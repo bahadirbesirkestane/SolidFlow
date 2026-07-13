@@ -23,9 +23,18 @@ type TaskActionFormState = Record<
   {
     mode: ActionMode;
     note: string;
+    blockReasonCode: string;
     nextAssigneeIds: string[];
   }
 >;
+
+const blockReasonOptions = [
+  { value: "MALZEME_BEKLIYOR", label: "Malzeme bekliyor" },
+  { value: "DIS_ONAY_BEKLIYOR", label: "Dis onay bekliyor" },
+  { value: "TEKNIK_BELIRSIZLIK", label: "Teknik belirsizlik" },
+  { value: "BASKA_DEPARTMAN_BEKLENIYOR", label: "Baska departman bekleniyor" },
+  { value: "SISTEMSEL_ENGEL", label: "Sistemsel engel" },
+];
 
 function formatDate(value?: string) {
   if (!value) {
@@ -123,6 +132,7 @@ export function UserWorkspacePage() {
     return taskForms[stepId] || {
       mode: "approve",
       note: `${workflowName} kontrol edildi`,
+      blockReasonCode: "MALZEME_BEKLIYOR",
       nextAssigneeIds: [],
     };
   }
@@ -158,7 +168,7 @@ export function UserWorkspacePage() {
       await updateTaskMutation.mutateAsync({
         stepId: item.step.id,
         status: item.step.status === "in_progress" ? "in_progress" : "ready",
-        note: buildBlockedNote(formState.note),
+        note: buildBlockedNote(formState.note, formState.blockReasonCode),
       });
     } else if (formState.mode === "unblock") {
       await updateTaskMutation.mutateAsync({
@@ -187,6 +197,7 @@ export function UserWorkspacePage() {
       [item.step.id]: {
         mode: "approve",
         note: `${item.workflow.name} kontrol edildi`,
+        blockReasonCode: "MALZEME_BEKLIYOR",
         nextAssigneeIds: [],
       },
     }));
@@ -375,6 +386,20 @@ export function UserWorkspacePage() {
                           onChange={(event) => updateTaskForm(item.step.id, item.workflow.name, { note: event.target.value })}
                           placeholder="Aciklayici not"
                         />
+                      </FormField>
+
+                      <FormField label="Bloke Nedeni" hint="Sadece bloke et aksiyonunda kullanilir.">
+                        <select
+                          disabled={formState.mode !== "block"}
+                          value={formState.blockReasonCode}
+                          onChange={(event) => updateTaskForm(item.step.id, item.workflow.name, { blockReasonCode: event.target.value })}
+                        >
+                          {blockReasonOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </FormField>
 
                       <FormField

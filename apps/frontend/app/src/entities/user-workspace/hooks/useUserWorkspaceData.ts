@@ -277,13 +277,15 @@ async function invalidateWorkspaceQueries(queryClient: ReturnType<typeof useQuer
   ]);
 }
 
-export function buildBlockedNote(note: string) {
+export function buildBlockedNote(note: string, code = "GENEL") {
   const cleanedNote = String(note || "").trim();
-  return cleanedNote ? `${BLOCKED_NOTE_PREFIX} ${cleanedNote}` : BLOCKED_NOTE_PREFIX;
+  const normalizedCode = String(code || "GENEL").trim().toUpperCase();
+  const prefix = `${BLOCKED_NOTE_PREFIX}:${normalizedCode}`;
+  return cleanedNote ? `${prefix} ${cleanedNote}` : prefix;
 }
 
 export function clearBlockedNote(note: string) {
-  return String(note || "").replace(BLOCKED_NOTE_PREFIX, "").trim();
+  return String(note || "").replace(/^\[BLOKE(?::[A-Z_]+)?\]/i, "").trim();
 }
 
 export function isBlockedNote(note?: string) {

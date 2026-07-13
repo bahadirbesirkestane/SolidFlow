@@ -331,9 +331,17 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
 
       const userMatch = matchPath(url.pathname, "/api/operations/users/:userId");
       const userProfileMatch = matchPath(url.pathname, "/api/operations/users/:userId/profile");
+      const userScoreAdjustmentMatch = matchPath(url.pathname, "/api/operations/users/:userId/score-adjustments");
       if (request.method === "GET" && userProfileMatch) {
         const result = await application.getUserProfile.execute(userProfileMatch.userId);
         sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && userScoreAdjustmentMatch) {
+        const payload = await readJsonBody(request);
+        const result = await application.adjustUserScore.execute(userScoreAdjustmentMatch.userId, payload, auth?.user || null);
+        sendJson(response, 201, result);
         return;
       }
 

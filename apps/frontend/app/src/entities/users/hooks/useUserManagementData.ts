@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  adjustUserScore,
   createUser,
   deactivateUser,
   getUserProfile,
@@ -31,6 +32,10 @@ export function useUserManagementData() {
     role: "worker" as "admin" | "manager" | "worker",
     password: "",
     isActive: true,
+  });
+  const [scoreAdjustmentForm, setScoreAdjustmentForm] = useState({
+    delta: "3",
+    reason: "",
   });
 
   const selectedUser = useMemo(
@@ -108,6 +113,20 @@ export function useUserManagementData() {
     },
   });
 
+  const adjustScoreMutation = useMutation({
+    mutationFn: ({ userId, delta, reason }: { userId: string; delta: number; reason: string }) =>
+      adjustUserScore(userId, { delta, reason }),
+    onSuccess: async () => {
+      setScoreAdjustmentForm({
+        delta: "3",
+        reason: "",
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["userManagement", "profile", selectedUserId] }),
+      ]);
+    },
+  });
+
   const usersByDepartment = useMemo(() => {
     const departments = usersQuery.data?.departments || [];
     const users = usersQuery.data?.users || [];
@@ -129,8 +148,11 @@ export function useUserManagementData() {
     setCreateForm,
     editForm,
     setEditForm,
+    scoreAdjustmentForm,
+    setScoreAdjustmentForm,
     createUserMutation,
     updateUserMutation,
     deactivateUserMutation,
+    adjustScoreMutation,
   };
 }

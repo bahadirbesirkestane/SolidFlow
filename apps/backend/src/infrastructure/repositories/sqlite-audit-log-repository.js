@@ -39,6 +39,24 @@ class SqliteAuditLogRepository {
       createdAt: row.created_at,
     }));
   }
+
+  async listByEntity(entityType, entityId) {
+    return this.db.prepare(`
+      SELECT id, project_id, actor_user_id, entity_type, entity_id, action, payload_json, created_at
+      FROM audit_events
+      WHERE entity_type = ? AND entity_id = ?
+      ORDER BY created_at DESC
+    `).all(entityType, entityId).map((row) => ({
+      id: row.id,
+      projectId: row.project_id,
+      actorUserId: row.actor_user_id || "",
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      action: row.action,
+      payload: safeJsonParse(row.payload_json),
+      createdAt: row.created_at,
+    }));
+  }
 }
 
 function safeJsonParse(value) {

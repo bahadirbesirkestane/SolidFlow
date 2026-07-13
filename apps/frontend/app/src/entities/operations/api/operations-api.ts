@@ -46,6 +46,8 @@ export type UserProfileSummary = {
       projectId: string;
       projectCode: string;
       projectName: string;
+      createdAt?: string;
+      completionNote?: string;
       updatedAt: string;
     }>;
     recentCompletedAssignments: Array<{
@@ -56,7 +58,54 @@ export type UserProfileSummary = {
       projectId: string;
       projectCode: string;
       projectName: string;
+      createdAt?: string;
+      handoverTo?: string;
+      completionNote?: string;
       completedAt: string;
+    }>;
+    performance: {
+      score: {
+        total: number;
+        base: number;
+        manualAdjustmentTotal: number;
+        breakdown: {
+          speed: number;
+          quality: number;
+          volume: number;
+          consistency: number;
+        };
+        positiveReasons: string[];
+        cautionReasons: string[];
+      };
+      metrics: {
+        totalCompleted: number;
+        completedThisWeek: number;
+        averageCompletionHours: number;
+        averageTargetHours: number;
+        handoverCount: number;
+        reworkCount: number;
+        blockedActiveCount: number;
+        blockedReasonSummary: Array<{
+          code: string;
+          label: string;
+          count: number;
+        }>;
+      };
+    };
+    departmentBenchmark: {
+      departmentName: string;
+      userCount: number;
+      userRank: number | null;
+      departmentAverageScore: number;
+      departmentAverageCompletionHours: number;
+      scoreGapFromAverage: number;
+    };
+    manualAdjustments: Array<{
+      id: string;
+      delta: number;
+      reason: string;
+      createdAt: string;
+      createdByUserId: string;
     }>;
   };
 };
@@ -198,6 +247,22 @@ export function deactivateUser(userId: string) {
 
 export function getUserProfile(userId: string) {
   return apiRequest<UserProfileSummary>(`/api/operations/users/${encodeURIComponent(userId)}/profile`);
+}
+
+export function adjustUserScore(
+  userId: string,
+  payload: {
+    delta: number;
+    reason: string;
+  },
+) {
+  return apiRequest<{ success: boolean; userId: string; delta: number; reason: string }>(
+    `/api/operations/users/${encodeURIComponent(userId)}/score-adjustments`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export function advanceWorkflowInstance(

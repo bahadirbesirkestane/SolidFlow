@@ -467,6 +467,8 @@ class SqliteWorkflowInstanceRepository {
         wis.name,
         wis.status,
         wis.sequence_no,
+        wis.created_at,
+        wis.completion_note,
         wi.name AS workflow_name,
         wi.progress_percent,
         wi.project_id,
@@ -486,6 +488,8 @@ class SqliteWorkflowInstanceRepository {
       stepName: row.name,
       status: row.status,
       sequenceNo: row.sequence_no,
+      createdAt: row.created_at,
+      completionNote: row.completion_note || "",
       workflowName: row.workflow_name,
       progressPercent: row.progress_percent,
       projectId: row.project_id,
@@ -499,7 +503,10 @@ class SqliteWorkflowInstanceRepository {
         wis.id,
         wis.instance_id,
         wis.name,
+        wis.created_at,
         wis.completed_at,
+        wis.handover_to,
+        wis.completion_note,
         wi.name AS workflow_name,
         wi.project_id,
         p.code AS project_code,
@@ -511,15 +518,17 @@ class SqliteWorkflowInstanceRepository {
       WHERE wsa.user_id = ?
         AND wis.status = 'completed'
       ORDER BY wis.completed_at DESC
-      LIMIT 10
     `).all(userId).map((row) => ({
       stepId: row.id,
       instanceId: row.instance_id,
       stepName: row.name,
+      createdAt: row.created_at,
       workflowName: row.workflow_name,
       projectId: row.project_id,
       projectCode: row.project_code || "",
       projectName: row.project_name || "",
+      handoverTo: row.handover_to || "",
+      completionNote: row.completion_note || "",
       completedAt: row.completed_at,
     }));
 
@@ -532,7 +541,8 @@ class SqliteWorkflowInstanceRepository {
         WHERE wsa.user_id = ? AND wis.status = 'completed'
       `).get(userId).count,
       activeAssignments,
-      recentCompletedAssignments: completedAssignments,
+      recentCompletedAssignments: completedAssignments.slice(0, 10),
+      completedAssignments,
     };
   }
 
