@@ -1,5 +1,5 @@
 const path = require("path");
-const { WorkflowEngine } = require("./domain/services/workflow-engine");
+const { RuleResolver } = require("./domain/services/rule-resolver");
 const { ScanProjectUseCase } = require("./application/use-cases/scan-project-use-case");
 const { GetFileTypeRulesUseCase } = require("./application/use-cases/get-file-type-rules-use-case");
 const { SaveFileTypeRulesUseCase } = require("./application/use-cases/save-file-type-rules-use-case");
@@ -51,6 +51,7 @@ const { ExportProjectOperationsReportUseCase } = require("./application/use-case
 const { JsonFileRepository } = require("./infrastructure/repositories/json-file-repository");
 const { GetAssignmentRulesUseCase } = require("./application/use-cases/get-assignment-rules-use-case");
 const { SaveAssignmentRulesUseCase } = require("./application/use-cases/save-assignment-rules-use-case");
+const { GetRuleResolverConfigUseCase } = require("./application/use-cases/get-rule-resolver-config-use-case");
 const { LocalErpWorkOrderRepository } = require("./infrastructure/repositories/local-erp-work-order-repository");
 const { ListErpWorkOrdersUseCase } = require("./application/use-cases/list-erp-work-orders-use-case");
 const { GetErpWorkOrderDetailUseCase } = require("./application/use-cases/get-erp-work-order-detail-use-case");
@@ -101,7 +102,7 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     rootPath,
     config: appConfig.cadConversion,
   });
-  const workflowEngine = new WorkflowEngine();
+  const ruleResolver = new RuleResolver();
   const reportExporter = new WorkflowReportExporter(rootPath);
   const operationsReportExporter = new OperationsReportExporter(rootPath);
   const workflowAssignmentResolver = new WorkflowAssignmentResolver({
@@ -115,7 +116,7 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
 
   const scanProjectUseCase = new ScanProjectUseCase({
     projectScanner,
-    workflowEngine,
+    ruleResolver,
     fileTypeRuleRepository,
     keywordRuleRepository,
     fileNameRuleRepository,
@@ -147,6 +148,12 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     saveFileNameRules: new SaveFileNameRulesUseCase({ fileNameRuleRepository }),
     getPartOverrides: new GetPartOverridesUseCase({ partOverrideRepository }),
     savePartOverrides: new SavePartOverridesUseCase({ partOverrideRepository }),
+    getRuleResolverConfig: new GetRuleResolverConfigUseCase({
+      fileTypeRuleRepository,
+      keywordRuleRepository,
+      fileNameRuleRepository,
+      partOverrideRepository,
+    }),
     getAssignmentRules: new GetAssignmentRulesUseCase({ assignmentRuleRepository }),
     saveAssignmentRules: new SaveAssignmentRulesUseCase({ assignmentRuleRepository }),
     listErpWorkOrders: new ListErpWorkOrdersUseCase({ erpWorkOrderRepository }),
@@ -229,10 +236,10 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   };
 
   const defaultScanDir = appConfig.paths.defaultScanDir;
-  const publicDir = appConfig.paths.publicDir;
+  const reactDistDir = appConfig.paths.frontendReactDistDir;
   const server = createHttpServer({
     application,
-    publicDir,
+    reactDistDir,
     defaultScanDir,
     frontendConfig: {
       ...appConfig.frontend,

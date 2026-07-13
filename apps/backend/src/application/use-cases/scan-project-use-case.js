@@ -1,11 +1,11 @@
-const { inferMainGroup } = require("../../domain/services/workflow-engine");
+const { inferMainGroup } = require("../../domain/services/rule-resolver");
 const { parseSolidFileDescriptor } = require("../../domain/services/solid-file-name-parser");
 const { resolveFileNameStrategy } = require("../../domain/services/file-name-strategy-engine");
 
 class ScanProjectUseCase {
   constructor({
     projectScanner,
-    workflowEngine,
+    ruleResolver,
     fileTypeRuleRepository,
     keywordRuleRepository,
     fileNameRuleRepository,
@@ -13,7 +13,7 @@ class ScanProjectUseCase {
     cadConversionService,
   }) {
     this.projectScanner = projectScanner;
-    this.workflowEngine = workflowEngine;
+    this.ruleResolver = ruleResolver;
     this.fileTypeRuleRepository = fileTypeRuleRepository;
     this.keywordRuleRepository = keywordRuleRepository;
     this.fileNameRuleRepository = fileNameRuleRepository;
@@ -46,14 +46,15 @@ class ScanProjectUseCase {
         fileNameRuleMatch,
       };
 
-      const classification = this.workflowEngine.resolve(enrichedDescriptor, {
+      const classification = this.ruleResolver.resolve(enrichedDescriptor, {
         fileTypeRules,
+        fileNameRules,
         keywordRules,
         partOverrides,
       });
 
       return {
-        partCode: enrichedDescriptor.partCode,
+        partCode: classification.partCode,
         fileName: fileDescriptor.fileName,
         fileType: classification.fileType,
         extension: fileDescriptor.extension,
@@ -63,24 +64,31 @@ class ScanProjectUseCase {
         serviceType: classification.serviceType,
         confidence: classification.confidence,
         matchedBy: classification.matchedBy,
+        matchedRuleId: classification.matchedRuleId,
+        matchedRuleSource: classification.matchedRuleSource,
+        reason: classification.reason,
+        routingKey: classification.routingKey,
         relativePath: fileDescriptor.relativePath,
         absolutePath: fileDescriptor.absolutePath,
-        effectiveFileName: effectiveDescriptor.fileName,
-        quantity: parsedName.quantity,
-        revision: parsedName.revision,
-        variant: parsedName.variant,
-        isMirrored: parsedName.isMirrored,
-        materialHints: parsedName.materialHints,
-        processHints: parsedName.processHints,
-        routingRule: fileNameRuleMatch.routingRule ? {
-          name: fileNameRuleMatch.routingRule.name,
-          workflowTemplateId: fileNameRuleMatch.routingRule.workflowTemplateId,
-          flowGroupMode: fileNameRuleMatch.routingRule.flowGroupMode,
-          flowGroupValue: fileNameRuleMatch.routingRule.flowGroupValue,
-          itemLabelTemplate: fileNameRuleMatch.routingRule.itemLabelTemplate,
+        effectiveFileName: classification.effectiveFileName,
+        quantity: classification.parsedName.quantity,
+        revision: classification.parsedName.revision,
+        variant: classification.parsedName.variant,
+        isMirrored: classification.parsedName.isMirrored,
+        materialHints: classification.parsedName.materialHints,
+        processHints: classification.parsedName.processHints,
+        routingRule: classification.routingDecision.workflowTemplateId ? {
+          name: fileNameRuleMatch.routingRule?.name || fileNameRuleMatch.routingRule?.id || "",
+          workflowTemplateId: classification.routingDecision.workflowTemplateId,
+          flowGroupMode: classification.routingDecision.flowGroupMode,
+          flowGroupValue: classification.routingDecision.flowGroupValue,
+          itemLabelTemplate: classification.routingDecision.itemLabelTemplate,
+          routingKey: classification.routingDecision.routingKey,
         } : null,
+        routingDecision: classification.routingDecision,
         fileNameRule: fileNameRuleMatch.matched ? {
           name: fileNameRuleMatch.rule.name,
+          id: fileNameRuleMatch.rule.id,
           explanation: fileNameRuleMatch.explanation,
           transformedValue: fileNameRuleMatch.transformedValue,
           effectiveFileName: fileNameRuleMatch.effectiveFileName,
@@ -142,8 +150,9 @@ function buildInsights(rows) {
       fileNameRuleHits[row.fileNameRule.name] = (fileNameRuleHits[row.fileNameRule.name] || 0) + 1;
     }
 
-    if (row.routingRule?.name) {
-      routingRuleHits[row.routingRule.name] = (routingRuleHits[row.routingRule.name] || 0) + 1;
+    const routingLabel = row.routingRule?.name || row.routingKey;
+    if (routingLabel) {
+      routingRuleHits[routingLabel] = (routingRuleHits[routingLabel] || 0) + 1;
     }
   }
 
@@ -152,7 +161,7 @@ function buildInsights(rows) {
       totalFiles: rows.length,
       uncertainFiles: rows.filter((row) => row.confidence === "Belirsiz").length,
       transformedFiles: rows.filter((row) => Boolean(row.fileNameRule)).length,
-      manualOverrides: rows.filter((row) => row.matchedBy.startsWith("Parca Override")).length,
+      manualOverrides: rows.filter((row) => row.matchedRuleSource === "override").length,
       exactMatches: rows.filter((row) => row.confidence === "Kesin").length,
       estimatedMatches: rows.filter((row) => row.confidence === "Tahmini").length,
     },
@@ -183,6 +192,9 @@ function buildPartList(rows) {
         mainGroup: row.mainGroup || row.folder || "",
         suggestedProcess: row.suggestedProcess,
         serviceType: row.serviceType,
+        routingKey: row.routingKey || "",
+        matchedBy: row.matchedBy || "",
+        matchedRuleSource: row.matchedRuleSource || "",
         quantity: 0,
         fileCount: 0,
         files: [],

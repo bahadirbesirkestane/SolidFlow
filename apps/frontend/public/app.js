@@ -27,12 +27,6 @@ function switchPage(pageName) {
   document.querySelectorAll(".page-panel").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.page === pageName);
   });
-
-  const activeButton = document.querySelector(`.sidebar-link[data-page-link="${pageName}"]`);
-  const activeGroup = activeButton ? activeButton.closest(".sidebar-group") : null;
-  if (activeGroup && "open" in activeGroup) {
-    activeGroup.open = true;
-  }
 }
 
 function switchResultView(viewName) {
@@ -97,17 +91,17 @@ function toggleShellNavigation() {
   const isMobile = window.matchMedia("(max-width: 1200px)").matches;
   const currentNavState = state.viewState?.nav || {};
 
-  if (isMobile) {
+  if (!isMobile) {
     setShellNavigationState({
       collapsed: false,
-      mobileOpen: !currentNavState.mobileOpen,
+      mobileOpen: false,
     });
     return;
   }
 
   setShellNavigationState({
-    collapsed: !currentNavState.collapsed,
-    mobileOpen: false,
+    collapsed: false,
+    mobileOpen: !currentNavState.mobileOpen,
   });
 }
 
@@ -419,6 +413,7 @@ function clearKeywordRulesView() {
 
 function clearFileNameRulesView() {
   state.fileNameRules = [];
+  state.ruleResolverConfig = null;
   renderFileNameRules();
 }
 

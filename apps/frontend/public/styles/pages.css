@@ -109,6 +109,190 @@
   gap: 16px;
 }
 
+.operations-page-v2,
+.rule-strategy-page-v2 {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.ops-hero-card,
+.rule-strategy-hero,
+.rule-strategy-resolver,
+.rule-strategy-editor {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 18px;
+  border: 1px solid #d9e0e7;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.ops-hero-card,
+.rule-strategy-hero {
+  grid-template-columns: minmax(0, 1.1fr) auto;
+  align-items: end;
+}
+
+.ops-hero-copy,
+.rule-strategy-hero-copy,
+.operations-stage,
+.operations-rail,
+.operations-admin-cards,
+.rule-card-list {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.ops-hero-actions,
+.rule-strategy-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.operations-workspace {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+
+.operations-rail-card,
+.operations-project-shell,
+.operations-admin-card {
+  padding: 22px;
+}
+
+.operations-project-list,
+.operations-user-directory,
+.operations-workflow-list {
+  display: grid;
+  gap: 14px;
+}
+
+.operations-admin-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.operations-project-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 18px;
+  align-items: start;
+}
+
+.operations-project-stage,
+.operations-toolbar,
+.operations-toolbar-copy,
+.operations-toolbar-actions,
+.operations-workflow-list {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.operations-progress-card {
+  padding: 18px;
+}
+
+.operations-toolbar {
+  padding: 4px 0 2px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.operations-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.operations-subform {
+  padding: 18px;
+  min-width: 0;
+}
+
+.operations-routing-card {
+  padding: 20px;
+}
+
+.operations-workflow-card {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.operations-workflow-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.operations-workflow-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.operations-advance-shell,
+.operations-quick-section,
+.operations-steps-table,
+.operations-add-step {
+  min-width: 0;
+}
+
+.operations-project-shell #selectedProjectPanel {
+  width: 100%;
+  min-width: 0;
+}
+
+.operations-project-shell .empty-state,
+.operations-workflow-list .empty-state {
+  padding: 22px;
+  border: 1px dashed #cfd8e3;
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.operations-step-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.rule-strategy-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.rule-overview-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid #dbe4ee;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfe 100%);
+}
+
+.rule-card-list {
+  gap: 18px;
+}
+
+.rule-strategy-editor,
+.rule-strategy-resolver,
+.rule-editor-card,
+.rule-editor-grid {
+  min-width: 0;
+}
+
 .page-empty {
   display: grid;
   gap: 12px;
@@ -126,5 +310,57 @@
 
   .advance-grid {
     grid-template-columns: 1fr;
+  }
+
+  .operations-workspace,
+  .operations-admin-cards,
+  .operations-setup-grid,
+  .rule-strategy-overview,
+  .ops-hero-card,
+  .rule-strategy-hero,
+  .operations-project-header,
+  .rule-editor-grid,
+  .operations-form-grid,
+  .operations-form-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-span-2,
+  .operations-form-span {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .ops-hero-card,
+  .rule-strategy-hero,
+  .rule-strategy-resolver,
+  .rule-strategy-editor {
+    padding: 18px;
+  }
+
+  .operations-inline-field,
+  .ops-hero-actions,
+  .rule-strategy-hero-actions,
+  .operations-rail-shortcuts,
+  .operations-toolbar-actions,
+  .rule-editor-card-actions,
+  .operations-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .operations-inline-field > button,
+  .ops-hero-actions > *,
+  .rule-strategy-hero-actions > *,
+  .operations-rail-shortcuts > *,
+  .operations-toolbar-actions > *,
+  .rule-editor-card-actions > *,
+  .operations-form-actions > * {
+    width: 100%;
+  }
+
+  .operations-workflow-actions {
+    justify-content: stretch;
   }
 }

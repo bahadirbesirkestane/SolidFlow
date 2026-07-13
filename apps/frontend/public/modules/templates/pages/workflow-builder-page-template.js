@@ -111,6 +111,8 @@ window.APP_PAGE_TEMPLATES["workflow-builder"] = `
                 <th>Süreç</th>
                 <th>Hizmet</th>
                 <th>Güven</th>
+                <th>Kural</th>
+                <th>Routing</th>
                 <th>3D</th>
                 <th>Kurala Git</th>
               </tr>

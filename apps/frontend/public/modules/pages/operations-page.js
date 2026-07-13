@@ -55,14 +55,17 @@ function renderProjectList() {
   }
 
   operationsProjectList.innerHTML = state.operations.projects.map((project) => `
-    <button class="project-card ${project.id === selectedProjectId ? "active" : ""}" data-action="select-project" data-project-id="${project.id}">
+    <button class="project-card adminlte-project-card ${project.id === selectedProjectId ? "active" : ""}" data-action="select-project" data-project-id="${project.id}">
+      <div class="adminlte-project-card-head">
+        <span class="badge ${project.progress?.completionPercentage >= 100 ? "good" : "warn"}">%${project.progress?.completionPercentage || 0}</span>
+        <span class="muted">${project.progress?.totalInstances || 0} akis</span>
+      </div>
       <div class="cell-stack">
         <strong>${escapeHtml(project.code)} - ${escapeHtml(project.name)}</strong>
-        <span class="muted">${escapeHtml(project.description || "Açıklama yok")}</span>
+        <span class="muted">${escapeHtml(project.description || "Aciklama yok")}</span>
       </div>
-      <div class="project-card-meta">
-        <span class="badge ${project.progress?.completionPercentage >= 100 ? "good" : "warn"}">%${project.progress?.completionPercentage || 0}</span>
-        <span class="muted">${project.progress?.totalInstances || 0} akış</span>
+      <div class="project-card-meta adminlte-project-card-meta">
+        <span class="muted">${project.progress?.completedSteps || 0}/${project.progress?.totalSteps || 0} adim</span>
       </div>
     </button>
   `).join("");
@@ -83,12 +86,12 @@ function renderUserManagement() {
   operationsUserDirectory.innerHTML = state.operations.departments.map((department) => {
     const users = state.operations.users.filter((user) => user.departmentId === department.id);
     return `
-      <section class="dept-card">
-        <div class="table-header">
+      <section class="dept-card adminlte-card-section">
+        <div class="table-header adminlte-card-header">
           <strong>${escapeHtml(department.name)}</strong>
-          <span class="muted">${users.length} kişi</span>
+          <span class="muted">${users.length} kisi</span>
         </div>
-        ${users.length === 0 ? `<p class="muted">Bu departmanda kullanıcı yok.</p>` : users.map((user) => `
+        ${users.length === 0 ? `<p class="muted">Bu departmanda kullanici yok.</p>` : users.map((user) => `
           <div class="user-row">
             <div class="cell-stack">
               <strong>${escapeHtml(user.fullName)}</strong>
@@ -127,8 +130,8 @@ function renderOpenJobs() {
   }
 
   operationsOpenJobsList.innerHTML = jobs.map((job) => `
-    <article class="feed-card">
-      <div class="table-header">
+    <article class="feed-card adminlte-feed-card">
+      <div class="table-header adminlte-feed-card-head">
         <strong>${escapeHtml(job.title)}</strong>
         <span class="badge warn">${escapeHtml(job.status)}</span>
       </div>
@@ -146,8 +149,8 @@ function renderAuditEvents() {
   }
 
   operationsAuditEventList.innerHTML = state.operations.auditEvents.slice(0, 6).map((event) => `
-    <article class="feed-card">
-      <div class="table-header">
+    <article class="feed-card adminlte-feed-card">
+      <div class="table-header adminlte-feed-card-head">
         <strong>${escapeHtml(event.action)}</strong>
         <span class="muted">${escapeHtml(event.entityType)}</span>
       </div>
@@ -177,23 +180,23 @@ function renderProjectRoutingSummary(dashboard) {
   }
 
   return `
-    <section class="ops-block">
-      <div class="table-header">
+    <section class="ops-block ui-card">
+      <div class="table-header adminlte-card-header">
         <div>
-          <h4>Yerleşim Özeti</h4>
-          <p class="muted">Bu projedeki dosya ve parça kalemlerinin süreç, hizmet ve aktif sorumlu dağılımı.</p>
+          <h4>Yerlestim Ozeti</h4>
+          <p class="muted">Bu projedeki dosya ve parca kalemlerinin surec, hizmet ve aktif sorumlu dagilimi.</p>
         </div>
       </div>
-      <div class="quick-step-grid">
-        <article class="quick-step-card">
-          <strong>Süreç Dağılımı</strong>
+      <div class="quick-step-grid ui-card-grid">
+        <article class="quick-step-card adminlte-mini-card">
+          <strong>Surec Dagilimi</strong>
           ${renderCountLines(processCounts)}
         </article>
-        <article class="quick-step-card">
-          <strong>Hizmet Dağılımı</strong>
+        <article class="quick-step-card adminlte-mini-card">
+          <strong>Hizmet Dagilimi</strong>
           ${renderCountLines(serviceCounts)}
         </article>
-        <article class="quick-step-card">
+        <article class="quick-step-card adminlte-mini-card">
           <strong>Aktif Sorumlu / Departman</strong>
           ${renderCountLines(assigneeCounts)}
         </article>
@@ -255,82 +258,105 @@ function renderSelectedProject() {
   const projectPreviewSignals = pickProjectPreviewSignals(dashboard);
 
   operationsSelectedProjectPanel.innerHTML = `
-    <div class="selected-project-header">
-      <div>
-        <p class="eyebrow">${escapeHtml(project.code)}</p>
-        <h3>${escapeHtml(project.name)}</h3>
-        <p class="muted">${escapeHtml(project.description || "Açıklama girilmemiş")}</p>
-      </div>
-      <div class="project-progress-card">
-        <strong>%${progress.completionPercentage}</strong>
-        <span class="muted">${progress.completedSteps}/${progress.totalSteps} adım tamamlandı</span>
-      </div>
-    </div>
-
-    <div class="inline-actions top-export-actions">
-      <span class="muted">Raporlar: workflow, adım, açık iş ve audit kayıtları tek dosyada.</span>
-      <div class="inline-actions">
-        <button
-          type="button"
-          class="secondary"
-          data-action="open-project-model-preview"
-          data-project-id="${project.id}"
-          data-part-code="${escapeAttribute(projectPreviewSignals.partCode)}"
-          data-file-name="${escapeAttribute(projectPreviewSignals.fileName)}"
-          data-effective-file-name="${escapeAttribute(projectPreviewSignals.effectiveFileName)}"
-          data-title="${escapeAttribute(projectPreviewSignals.title)}"
-        >
-          3D Önizleme
-        </button>
-        <button type="button" class="secondary" data-action="assign-project-workflows" data-project-id="${project.id}">İşleri Kullanıcılara Aktar</button>
-        <button type="button" class="secondary danger-button" data-action="delete-project" data-project-id="${project.id}">Projeyi Sil</button>
-        <button type="button" class="secondary" data-action="download-operations-report" data-format="xlsx">Excel İndir</button>
-        <button type="button" class="secondary" data-action="download-operations-report" data-format="csv">CSV İndir</button>
-        <button type="button" class="secondary" data-action="download-operations-report" data-format="pdf">PDF İndir</button>
-      </div>
-    </div>
-
-    <div class="progress-rail">
-      <div class="progress-rail-fill" style="width:${progress.completionPercentage}%"></div>
-    </div>
-
-    <div class="project-actions-grid">
-      <form id="workflowCreateForm" class="embedded-form">
-        <h4>Template ile workflow ekle</h4>
-        <div class="inline-grid">
-          <select id="workflowTemplateSelect" required>${renderTemplateOptions()}</select>
-          <input id="workflowInstanceNameInput" type="text" placeholder="Workflow adı" />
-          <input id="workflowItemLabelInput" type="text" placeholder="Kalem / Parça grubu" />
-          <input id="workflowItemCountInput" type="number" min="1" value="1" />
+    <div class="operations-project-stage">
+      <div class="operations-project-header">
+        <div>
+          <p class="eyebrow">${escapeHtml(project.code)}</p>
+          <h3>${escapeHtml(project.name)}</h3>
+          <p class="muted">${escapeHtml(project.description || "Aciklama girilmemis")}</p>
         </div>
-        <button type="submit">Workflow Oluştur</button>
-      </form>
+        <div class="project-progress-card adminlte-highlight-card operations-progress-card">
+          <strong>%${progress.completionPercentage}</strong>
+          <span class="muted">${progress.completedSteps}/${progress.totalSteps} adim tamamlandi</span>
+        </div>
+      </div>
 
-      <form id="projectBootstrapForm" class="embedded-form">
-        <h4>Klasörden otomatik workflow üret</h4>
-        <div class="inline-grid">
-          <div class="control-row">
-            <input id="bootstrapFolderPathInput" type="text" value="${escapeAttribute(currentFolderSuggestion)}" placeholder="Proje klasör yolu" />
-            <button
-              type="button"
-              class="secondary"
-              data-action="pick-folder"
-              data-target-input="bootstrapFolderPathInput"
-              data-picker-title="Workflow üretilecek proje klasörünü seç"
-              data-status-target="operations"
-            >
-              Klasör Seç
-            </button>
+      <div class="operations-toolbar">
+        <div class="operations-toolbar-copy">
+          <p class="muted">Raporlar, workflow yönetimi ve hızlı adım güncelleme aynı çalışma alanında toplanır.</p>
+        </div>
+        <div class="operations-toolbar-actions">
+          <button
+            type="button"
+            class="secondary"
+            data-action="open-project-model-preview"
+            data-project-id="${project.id}"
+            data-part-code="${escapeAttribute(projectPreviewSignals.partCode)}"
+            data-file-name="${escapeAttribute(projectPreviewSignals.fileName)}"
+            data-effective-file-name="${escapeAttribute(projectPreviewSignals.effectiveFileName)}"
+            data-title="${escapeAttribute(projectPreviewSignals.title)}"
+          >
+            3D Önizleme
+          </button>
+          <button type="button" class="secondary" data-action="assign-project-workflows" data-project-id="${project.id}">İşleri Kullanıcılara Aktar</button>
+          <button type="button" class="secondary" data-action="download-operations-report" data-format="xlsx">Excel İndir</button>
+          <button type="button" class="secondary" data-action="download-operations-report" data-format="csv">CSV İndir</button>
+          <button type="button" class="secondary" data-action="download-operations-report" data-format="pdf">PDF İndir</button>
+          <button type="button" class="secondary danger-button" data-action="delete-project" data-project-id="${project.id}">Projeyi Sil</button>
+        </div>
+      </div>
+
+      <div class="progress-rail">
+        <div class="progress-rail-fill" style="width:${progress.completionPercentage}%"></div>
+      </div>
+
+      <div class="operations-setup-grid">
+        <form id="workflowCreateForm" class="embedded-form adminlte-form-panel ui-form-stack operations-subform">
+          <h4>Template ile workflow ekle</h4>
+          <div class="operations-form-grid compact">
+            <label class="operations-form-span">
+              <span>Template</span>
+              <select id="workflowTemplateSelect" required>${renderTemplateOptions()}</select>
+            </label>
+            <label>
+              <span>Workflow adı</span>
+              <input id="workflowInstanceNameInput" type="text" placeholder="Workflow adı" />
+            </label>
+            <label>
+              <span>Kalem / Parça grubu</span>
+              <input id="workflowItemLabelInput" type="text" placeholder="Kalem / Parça grubu" />
+            </label>
+            <label>
+              <span>Adet</span>
+              <input id="workflowItemCountInput" type="number" min="1" value="1" />
+            </label>
           </div>
-        </div>
-        <button type="submit" class="secondary">Klasörden Üret</button>
-      </form>
-    </div>
+          <div class="operations-form-actions">
+            <button type="submit">Workflow Oluştur</button>
+          </div>
+        </form>
 
-    ${renderProjectRoutingSummary(dashboard)}
+        <form id="projectBootstrapForm" class="embedded-form adminlte-form-panel ui-form-stack operations-subform">
+          <h4>Klasorden otomatik workflow uret</h4>
+          <div class="operations-form-grid compact">
+            <label class="operations-form-span">
+              <span>Proje klasörü</span>
+              <div class="operations-inline-field">
+                <input id="bootstrapFolderPathInput" type="text" value="${escapeAttribute(currentFolderSuggestion)}" placeholder="Proje klasör yolu" />
+                <button
+                  type="button"
+                  class="secondary"
+                  data-action="pick-folder"
+                  data-target-input="bootstrapFolderPathInput"
+                  data-picker-title="Workflow üretilecek proje klasörünü seç"
+                  data-status-target="operations"
+                >
+                  Klasör Seç
+                </button>
+              </div>
+            </label>
+          </div>
+          <div class="operations-form-actions">
+            <button type="submit" class="secondary">Klasörden Üret</button>
+          </div>
+        </form>
+      </div>
 
-    <div class="workflow-stack">
-      ${dashboard.workflows.length === 0 ? `<div class="empty-state">Bu projede henüz workflow yok. Template seçip ekleyebilir ya da klasörden otomatik üretebilirsin.</div>` : dashboard.workflows.map(renderWorkflowCard).join("")}
+      ${renderProjectRoutingSummary(dashboard)}
+
+      <div class="operations-workflow-list">
+        ${dashboard.workflows.length === 0 ? `<div class="empty-state">Bu projede henüz workflow yok. Template seçip ekleyebilir ya da klasörden otomatik üretebilirsin.</div>` : dashboard.workflows.map(renderWorkflowCard).join("")}
+      </div>
     </div>
   `;
 }
@@ -341,13 +367,13 @@ function renderWorkflowCard(instance) {
   const previewSignals = pickWorkflowPreviewSignals(instance, instance?.name || "Workflow");
 
   return `
-    <article class="workflow-card">
-      <div class="table-header">
+    <article class="workflow-card ui-card operations-workflow-card">
+      <div class="table-header operations-workflow-head">
         <div>
           <h4>${escapeHtml(instance.name)}</h4>
           <p class="muted">${escapeHtml(instance.itemLabel || instance.templateName || "Genel akış")} | ${instance.steps.length} adım${escapeHtml(itemCountText)}</p>
         </div>
-        <div class="workflow-meta">
+        <div class="workflow-meta operations-workflow-actions">
           <button
             class="secondary link-button"
             data-action="open-project-model-preview"
@@ -369,12 +395,12 @@ function renderWorkflowCard(instance) {
         <div class="progress-rail-fill" style="width:${instance.progressPercent}%"></div>
       </div>
 
-      <div class="advance-panel">
+      <div class="advance-panel ui-form-stack operations-advance-shell">
         <div class="cell-stack">
           <strong>Sıradaki aktif adım</strong>
           <span class="muted">${escapeHtml(instance.currentStep ? `${instance.currentStep.sequenceNo}. ${instance.currentStep.name}` : "Tüm adımlar tamamlandı")}</span>
         </div>
-        <div class="advance-grid" data-instance-id="${instance.id}">
+        <div class="advance-grid operations-advance-grid" data-instance-id="${instance.id}">
           <select data-role="completed-by">
             <option value="">Tamamlayan kişi</option>
             ${renderUserOptions()}
@@ -386,7 +412,7 @@ function renderWorkflowCard(instance) {
           <button ${canAdvance ? "" : "disabled"} data-action="advance-instance" data-instance-id="${instance.id}">Sıradaki Adıma Geç</button>
         </div>
         ${instance.currentStep ? `
-          <div class="advance-grid" data-step-id="${instance.currentStep.id}">
+          <div class="advance-grid operations-advance-grid" data-step-id="${instance.currentStep.id}">
             <select data-role="reassign-assignees" multiple size="3">
               ${renderUserOptions(true, instance.currentStep.assigneeIds)}
             </select>
@@ -396,20 +422,20 @@ function renderWorkflowCard(instance) {
         ` : ""}
       </div>
 
-      <section class="quick-edit-shell">
-        <div class="table-header">
+      <section class="quick-edit-shell adminlte-card-section operations-quick-section">
+        <div class="table-header adminlte-card-header">
           <div>
             <h5>Kolay Düzenleme</h5>
             <p class="muted">Aktif proje içinde adımları satır açmadan hızlıca güncelle.</p>
           </div>
         </div>
-        <div class="quick-step-grid">
+        <div class="quick-step-grid operations-step-card-grid">
           ${instance.steps.map((step) => renderQuickStepCard(instance, step)).join("")}
         </div>
       </section>
 
-      <div class="table-wrap">
-        <table class="ops-table">
+      <div class="table-wrap ui-table-wrap operations-steps-table">
+        <table class="ops-table adminlte-table">
           <thead>
             <tr>
               <th>Sıra</th>
@@ -429,19 +455,36 @@ function renderWorkflowCard(instance) {
         </table>
       </div>
 
-      <form class="add-step-form" data-instance-id="${instance.id}">
-        <div class="inline-grid">
-          <input data-role="new-step-name" type="text" placeholder="Yeni adım adı" required />
-          <input data-role="new-step-description" type="text" placeholder="Açıklama" />
-          <input data-role="new-step-sequence" type="number" min="1" value="${instance.steps.length + 1}" />
-          <select data-role="new-step-status">${renderStatusOptions("pending")}</select>
-          <select data-role="new-step-assignees" multiple size="3">${renderUserOptions(true)}</select>
+      <form class="add-step-form ui-form-stack operations-add-step" data-instance-id="${instance.id}">
+        <div class="operations-form-grid compact">
+          <label>
+            <span>Yeni adım adı</span>
+            <input data-role="new-step-name" type="text" placeholder="Yeni adım adı" required />
+          </label>
+          <label>
+            <span>Açıklama</span>
+            <input data-role="new-step-description" type="text" placeholder="Açıklama" />
+          </label>
+          <label>
+            <span>Sıra</span>
+            <input data-role="new-step-sequence" type="number" min="1" value="${instance.steps.length + 1}" />
+          </label>
+          <label>
+            <span>Durum</span>
+            <select data-role="new-step-status">${renderStatusOptions("pending")}</select>
+          </label>
+          <label class="operations-form-span">
+            <span>Sorumlular</span>
+            <select data-role="new-step-assignees" multiple size="3">${renderUserOptions(true)}</select>
+          </label>
           <label class="checkbox-inline">
             <input data-role="new-step-optional" type="checkbox" />
             Opsiyonel
           </label>
         </div>
-        <button type="submit" class="secondary">Yeni Adım Ekle</button>
+        <div class="operations-form-actions">
+          <button type="submit" class="secondary">Yeni Adım Ekle</button>
+        </div>
       </form>
     </article>
   `;
@@ -449,7 +492,7 @@ function renderWorkflowCard(instance) {
 
 function renderQuickStepCard(instance, step) {
   return `
-    <article class="quick-step-card" data-step-id="${step.id}">
+    <article class="quick-step-card ui-form-stack" data-step-id="${step.id}">
       <strong>${escapeHtml(`${step.sequenceNo}. ${step.name}`)}</strong>
       <input data-role="step-name" value="${escapeAttribute(step.name)}" />
       <input data-role="step-description" value="${escapeAttribute(step.description || "")}" />

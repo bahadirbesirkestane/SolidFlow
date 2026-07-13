@@ -5,7 +5,13 @@
   "main": "apps/backend/src/server.js",
   "scripts": {
     "start": "node apps/backend/src/server.js",
-    "start:backend": "node apps/backend/src/server.js"
+    "start:backend": "node apps/backend/src/server.js",
+    "test:backend": "node --test apps/backend/src/application/use-cases/scan-project-use-case.test.js apps/backend/src/domain/services/rule-resolver.test.js",
+    "frontend:install": "node scripts/run-frontend-command.js install",
+    "frontend:dev": "node scripts/run-frontend-command.js dev",
+    "frontend:build": "node scripts/frontend-build.mjs",
+    "frontend:typecheck": "node scripts/run-frontend-command.js typecheck",
+    "frontend:lint": "node scripts/run-frontend-command.js lint"
   },
   "engines": {
     "node": ">=22.5.0",

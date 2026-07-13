@@ -26,6 +26,7 @@ async function loadKeywordRules() {
 
 async function loadFileNameRules() {
   state.fileNameRules = await requestJson("/api/config/file-name-rules");
+  await loadRuleResolverConfig();
   renderFileNameRules();
   return state.fileNameRules;
 }
@@ -34,6 +35,12 @@ async function loadOverrides() {
   state.overrides = await requestJson("/api/config/part-overrides");
   renderOverrides();
   return state.overrides;
+}
+
+async function loadRuleResolverConfig() {
+  state.ruleResolverConfig = await requestJson("/api/config/rule-resolver");
+  renderRuleResolverConfig();
+  return state.ruleResolverConfig;
 }
 
 function renderFileTypeRules() {
@@ -86,72 +93,183 @@ function renderKeywordRules() {
 function renderFileNameRules() {
   if (state.fileNameRules.length === 0) {
     rulesFileNameRulesBody.innerHTML = `
-      <tr>
-        <td colspan="14" class="muted">Henuz dosya adi stratejisi yuklenmedi veya kayit bulunmuyor.</td>
-      </tr>
+      <article class="rule-card-empty">
+        <strong>Henuz dosya adi stratejisi yok.</strong>
+        <p class="muted">Yeni Strateji butonuyla ilk kurali ekleyebilir veya kayitli verileri yenileyebilirsin.</p>
+      </article>
     `;
     return;
   }
 
   rulesFileNameRulesBody.innerHTML = state.fileNameRules.map((rule, index) => `
-    <tr>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="name" value="${escapeAttribute(rule.name || "")}" /></td>
-      <td>
-        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="strategyType">
-          <option value="normalize" ${rule.strategyType === "normalize" ? "selected" : ""}>Normalize</option>
-          <option value="classify" ${rule.strategyType === "classify" ? "selected" : ""}>Siniflandir</option>
-          <option value="route" ${rule.strategyType === "route" ? "selected" : ""}>Yonlendir</option>
-          <option value="hybrid" ${rule.strategyType === "hybrid" ? "selected" : ""}>Karma</option>
-        </select>
-      </td>
-      <td>
-        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternMode">
-          <option value="prefix" ${rule.patternMode === "prefix" ? "selected" : ""}>On Ek</option>
-          <option value="suffix" ${rule.patternMode === "suffix" ? "selected" : ""}>Son Ek</option>
-          <option value="contains" ${rule.patternMode === "contains" ? "selected" : ""}>Icerir</option>
-          <option value="template" ${rule.patternMode === "template" ? "selected" : ""}>Sablon</option>
-          <option value="regex" ${rule.patternMode === "regex" ? "selected" : ""}>Regex</option>
-        </select>
-      </td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternValue" value="${escapeAttribute(rule.patternValue || "")}" placeholder="Ornek: SA_" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="replacementValue" value="${escapeAttribute(rule.replacementValue || "")}" placeholder="Bos ise yakalanan deger kullanilir" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="process" value="${escapeAttribute(rule.process || "")}" placeholder="Opsiyonel surec" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="serviceType" value="${escapeAttribute(rule.serviceType || "")}" placeholder="Opsiyonel hizmet" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="workflowTemplateId" value="${escapeAttribute(rule.workflowTemplateId || "")}" placeholder="template-production-flow" /></td>
-      <td>
-        <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="flowGroupMode">
-          <option value="auto" ${rule.flowGroupMode === "auto" ? "selected" : ""}>Otomatik</option>
-          <option value="mainGroup" ${rule.flowGroupMode === "mainGroup" ? "selected" : ""}>Ana Grup</option>
-          <option value="folder" ${rule.flowGroupMode === "folder" ? "selected" : ""}>Klasor</option>
-          <option value="partCode" ${rule.flowGroupMode === "partCode" ? "selected" : ""}>Parca Kodu</option>
-          <option value="fileName" ${rule.flowGroupMode === "fileName" ? "selected" : ""}>Dosya Adi</option>
-          <option value="fixed" ${rule.flowGroupMode === "fixed" ? "selected" : ""}>Sabit</option>
-        </select>
-      </td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="flowGroupValue" value="${escapeAttribute(rule.flowGroupValue || "")}" placeholder="Sabit grup degeri" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="itemLabelTemplate" value="${escapeAttribute(rule.itemLabelTemplate || "")}" placeholder="{group} / {partCode}" /></td>
-      <td><input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="priority" type="number" value="${escapeAttribute(String(rule.priority || 0))}" /></td>
-      <td class="boolean-cell"><input type="checkbox" data-entity="fileNameRule" data-index="${index}" data-field="isActive" ${rule.isActive ? "checked" : ""} /></td>
-      <td><button class="secondary link-button" data-action="delete-file-name-rule" data-index="${index}">Sil</button></td>
-    </tr>
-    <tr class="sub-row">
-      <td colspan="14">
-        <div class="inline-grid two-columns">
-          <label>
-            Hedef Alan
-            <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="applyTo">
-              <option value="fileName" ${rule.applyTo === "fileName" ? "selected" : ""}>Tam Dosya Adi</option>
-              <option value="baseName" ${rule.applyTo === "baseName" ? "selected" : ""}>Uzantisiz Ad</option>
-            </select>
-          </label>
-          <label>
-            Not
-            <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="note" value="${escapeAttribute(rule.note || "")}" placeholder="Kural amaci ve ornek kullanim" />
-          </label>
+    <article class="rule-editor-card">
+      <div class="rule-editor-card-head">
+        <div>
+          <p class="eyebrow">Kural ${index + 1}</p>
+          <input class="inline-input rule-title-input" data-entity="fileNameRule" data-index="${index}" data-field="name" value="${escapeAttribute(rule.name || "")}" placeholder="Kural adi" />
         </div>
-      </td>
-    </tr>
+        <div class="rule-editor-card-actions">
+          <label class="rule-active-toggle">
+            <input type="checkbox" data-entity="fileNameRule" data-index="${index}" data-field="isActive" ${rule.isActive ? "checked" : ""} />
+            <span>Aktif</span>
+          </label>
+          <button class="secondary link-button" data-action="delete-file-name-rule" data-index="${index}">Sil</button>
+        </div>
+      </div>
+
+      <div class="rule-editor-grid">
+        <label>
+          <span>Strateji</span>
+          <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="strategyType">
+            <option value="normalize" ${rule.strategyType === "normalize" ? "selected" : ""}>Normalize</option>
+            <option value="classify" ${rule.strategyType === "classify" ? "selected" : ""}>Siniflandir</option>
+            <option value="route" ${rule.strategyType === "route" ? "selected" : ""}>Yonlendir</option>
+            <option value="hybrid" ${rule.strategyType === "hybrid" ? "selected" : ""}>Karma</option>
+          </select>
+        </label>
+        <label>
+          <span>Esleme Tipi</span>
+          <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternMode">
+            <option value="prefix" ${rule.patternMode === "prefix" ? "selected" : ""}>On Ek</option>
+            <option value="suffix" ${rule.patternMode === "suffix" ? "selected" : ""}>Son Ek</option>
+            <option value="contains" ${rule.patternMode === "contains" ? "selected" : ""}>Icerir</option>
+            <option value="template" ${rule.patternMode === "template" ? "selected" : ""}>Sablon</option>
+            <option value="regex" ${rule.patternMode === "regex" ? "selected" : ""}>Regex</option>
+          </select>
+        </label>
+        <label>
+          <span>Hedef Alan</span>
+          <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="applyTo">
+            <option value="fileName" ${rule.applyTo === "fileName" ? "selected" : ""}>Tam Dosya Adi</option>
+            <option value="baseName" ${rule.applyTo === "baseName" ? "selected" : ""}>Uzantisiz Ad</option>
+          </select>
+        </label>
+        <label>
+          <span>Oncelik</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="priority" type="number" value="${escapeAttribute(String(rule.priority || 0))}" />
+        </label>
+      </div>
+
+      <div class="rule-editor-grid">
+        <label class="rule-span-2">
+          <span>Desen</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="patternValue" value="${escapeAttribute(rule.patternValue || "")}" placeholder="Ornek: SA_" />
+        </label>
+        <label class="rule-span-2">
+          <span>Donusum</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="replacementValue" value="${escapeAttribute(rule.replacementValue || "")}" placeholder="Bos ise yakalanan deger kullanilir" />
+        </label>
+      </div>
+
+      <div class="rule-editor-grid">
+        <label>
+          <span>Surec</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="process" value="${escapeAttribute(rule.process || "")}" placeholder="Opsiyonel surec" />
+        </label>
+        <label>
+          <span>Hizmet</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="serviceType" value="${escapeAttribute(rule.serviceType || "")}" placeholder="Opsiyonel hizmet" />
+        </label>
+        <label>
+          <span>Workflow Template</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="workflowTemplateId" value="${escapeAttribute(rule.workflowTemplateId || "")}" placeholder="template-production-flow" />
+        </label>
+        <label>
+          <span>Grup Modu</span>
+          <select class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="flowGroupMode">
+            <option value="auto" ${rule.flowGroupMode === "auto" ? "selected" : ""}>Otomatik</option>
+            <option value="mainGroup" ${rule.flowGroupMode === "mainGroup" ? "selected" : ""}>Ana Grup</option>
+            <option value="folder" ${rule.flowGroupMode === "folder" ? "selected" : ""}>Klasor</option>
+            <option value="partCode" ${rule.flowGroupMode === "partCode" ? "selected" : ""}>Parca Kodu</option>
+            <option value="fileName" ${rule.flowGroupMode === "fileName" ? "selected" : ""}>Dosya Adi</option>
+            <option value="fixed" ${rule.flowGroupMode === "fixed" ? "selected" : ""}>Sabit</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="rule-editor-grid">
+        <label class="rule-span-2">
+          <span>Grup Degeri</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="flowGroupValue" value="${escapeAttribute(rule.flowGroupValue || "")}" placeholder="Sabit grup degeri" />
+        </label>
+        <label class="rule-span-2">
+          <span>Etiket Sablonu</span>
+          <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="itemLabelTemplate" value="${escapeAttribute(rule.itemLabelTemplate || "")}" placeholder="{group} / {partCode}" />
+        </label>
+      </div>
+
+      <label>
+        <span>Not</span>
+        <input class="inline-input" data-entity="fileNameRule" data-index="${index}" data-field="note" value="${escapeAttribute(rule.note || "")}" placeholder="Kural amaci ve ornek kullanim" />
+      </label>
+    </article>
   `).join("");
+}
+
+function renderRuleResolverConfig() {
+  const summaryElement = document.getElementById("ruleResolverSummary");
+  const precedenceElement = document.getElementById("ruleResolverPrecedence");
+  const sourceListElement = document.getElementById("ruleResolverSourceList");
+  if (!summaryElement || !precedenceElement || !sourceListElement) {
+    return;
+  }
+
+  if (!state.ruleResolverConfig) {
+    summaryElement.innerHTML = "";
+    precedenceElement.innerHTML = "";
+    sourceListElement.innerHTML = `<div class="empty-state">Resolver yapisi yuklenemedi.</div>`;
+    return;
+  }
+
+  const counts = state.ruleResolverConfig.counts || {};
+  const precedence = Array.isArray(state.ruleResolverConfig.precedence) ? state.ruleResolverConfig.precedence : [];
+  const sources = state.ruleResolverConfig.sources || {};
+
+  summaryElement.innerHTML = [
+    createStatCard("Toplam aktif kural", String(counts.totalActiveRules || 0)),
+    createStatCard("Override", String(counts.overrides || 0)),
+    createStatCard("Dosya adi", String(counts.fileNameRules || 0)),
+    createStatCard("Keyword", String(counts.keywordRules || 0)),
+    createStatCard("Uzanti", String(counts.fileTypeRules || 0)),
+  ].join("");
+
+  precedenceElement.innerHTML = precedence.map((step, index) => `
+    <span class="badge ${index === 0 ? "warn" : "good"}">${escapeHtml(`${index + 1}. ${formatResolverStep(step)}`)}</span>
+  `).join("");
+
+  sourceListElement.innerHTML = [
+    createResolverSourceCard("Override katmani", sources.overrides || []),
+    createResolverSourceCard("Dosya adi stratejileri", sources.fileNameRules || []),
+    createResolverSourceCard("Keyword kurallari", sources.keywordRules || []),
+  ].join("");
+}
+
+function formatResolverStep(step) {
+  const labels = {
+    override: "Override",
+    fileName: "Dosya Adi",
+    keyword: "Keyword",
+    fileType: "Uzanti",
+    fallback: "Fallback",
+  };
+
+  return labels[step] || step;
+}
+
+function createResolverSourceCard(title, collection) {
+  const lines = collection.slice(0, 5).map((item) => {
+    const detail = [item.process, item.serviceType, item.routingKey].filter(Boolean).join(" | ");
+    return `<p class="muted">${escapeHtml(item.label || item.matchValue || item.id)}${detail ? `: <strong>${escapeHtml(detail)}</strong>` : ""}</p>`;
+  }).join("");
+
+  return `
+    <article class="insight-card adminlte-feed-card">
+      <strong>${escapeHtml(title)}</strong>
+      <div class="cell-stack">
+        ${lines || `<p class="muted">Aktif kural yok.</p>`}
+      </div>
+    </article>
+  `;
 }
 
 function renderOverrides() {
@@ -183,6 +301,7 @@ async function saveFileTypeRules() {
     method: "PUT",
     body: JSON.stringify(state.fileTypeRules),
   });
+  await loadRuleResolverConfig();
   renderFileTypeRules();
   rulesStatusText.textContent = "Dosya tipi kurallari kaydedildi.";
 }
@@ -192,6 +311,7 @@ async function saveKeywordRules() {
     method: "PUT",
     body: JSON.stringify(state.keywordRules),
   });
+  await loadRuleResolverConfig();
   renderKeywordRules();
   rulesStatusText.textContent = "Keyword kurallari kaydedildi.";
 }
@@ -201,6 +321,7 @@ async function saveFileNameRules() {
     method: "PUT",
     body: JSON.stringify(state.fileNameRules),
   });
+  await loadRuleResolverConfig();
   renderFileNameRules();
   rulesStatusText.textContent = "Dosya adi stratejileri kaydedildi.";
 }
@@ -211,6 +332,7 @@ async function saveOverrides() {
     method: "PUT",
     body: JSON.stringify(state.overrides),
   });
+  await loadRuleResolverConfig();
   state.editingOverrideId = null;
   clearOverrideForm();
   renderOverrides();

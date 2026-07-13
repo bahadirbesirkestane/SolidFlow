@@ -63,54 +63,57 @@ window.APP_PAGE_TEMPLATES["rule-keywords"] = `
 `;
 
 window.APP_PAGE_TEMPLATES["rule-file-names"] = `
-  <section class="panel page-shell table-page-shell">
-    <div class="page-section-intro">
-      <div>
+  <section class="page-shell rule-strategy-page-v2">
+    <section class="rule-strategy-hero">
+      <div class="rule-strategy-hero-copy">
+        <p class="eyebrow">Merkezi Kural Editoru</p>
         <h2>Dosya Adi Stratejileri</h2>
-        <p class="muted">Dosya adi okuma, isim normalize etme, surec atama ve workflow yonlendirme kararlarini tek yerden yonet.</p>
+        <p class="muted">Dosya adini nasil okuyacagini, nasil siniflandiracagini ve hangi workflow yonlendirmesini uretecegini tek ekrandan yonet.</p>
       </div>
-      <div class="inline-actions">
+      <div class="rule-strategy-hero-actions">
         <button id="addFileNameRuleButton" class="secondary">Yeni Strateji</button>
         <button id="refreshFileNameRulesButton" class="secondary">Yenile</button>
         <button id="resetFileNameRulesButton" class="secondary">Temizle</button>
         <button id="saveFileNameRulesButton">Kaydet</button>
       </div>
-    </div>
+    </section>
 
-    <div class="rules-callout-grid">
-      <article class="placeholder-card">
-        <h3>Merkezi Yonetim</h3>
-        <p class="muted">Dosya isimlerini yorumlama yaklasimi, surec atamalari ve veri akisi yonlendirmeleri ayni tabloda tutulur.</p>
+    <section class="rule-strategy-overview">
+      <article class="rule-overview-card">
+        <h3>Tek Kaynak</h3>
+        <p class="muted">Normalize, siniflandirma ve routing kararlarini ayni kural nesnesinde topla.</p>
       </article>
-      <article class="placeholder-card">
-        <h3>Bir Sonraki Adim Hazir</h3>
-        <p class="muted">Workflow template, grup mantigi ve etiket sablonu alanlari; dosya adina gore otomatik veri akisi uretiminin temelini hazirlar.</p>
+      <article class="rule-overview-card">
+        <h3>Izlenebilir Karar</h3>
+        <p class="muted">Tarama sonucunda hangi kuralin hangi karari verdigi acikca gorulebilir olsun.</p>
       </article>
-    </div>
+      <article class="rule-overview-card">
+        <h3>Sonraki Asama Hazir</h3>
+        <p class="muted">Workflow template, grup modu ve etiket sablonu ile sonraki otomatik routing adimina temel hazirla.</p>
+      </article>
+    </section>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Kural Adi</th>
-            <th>Strateji</th>
-            <th>Esleme</th>
-            <th>Desen</th>
-            <th>Donusum</th>
-            <th>Surec</th>
-            <th>Hizmet</th>
-            <th>Workflow</th>
-            <th>Grup Modu</th>
-            <th>Grup Degeri</th>
-            <th>Etiket Sablonu</th>
-            <th>Oncelik</th>
-            <th>Aktif</th>
-            <th>Sil</th>
-          </tr>
-        </thead>
-        <tbody id="fileNameRulesBody"></tbody>
-      </table>
-    </div>
+    <section class="rule-strategy-resolver">
+      <div class="table-header adminlte-card-header">
+        <div>
+          <h3>Resolver Omurgasi</h3>
+          <p class="muted">Aktif kurallar tek karar zincirinde override, dosya adi, keyword, uzanti ve fallback sirasiyla calisir.</p>
+        </div>
+      </div>
+      <div id="ruleResolverSummary" class="ops-summary ui-card-grid"></div>
+      <div id="ruleResolverPrecedence" class="project-card-meta"></div>
+      <div id="ruleResolverSourceList" class="insight-list"></div>
+    </section>
+
+    <section class="rule-strategy-editor">
+      <div class="table-header">
+        <div>
+          <h3>Kural Kartlari</h3>
+          <p class="muted">Her kural tek kartta duzenlenir; kolon kaymasi yerine okunabilir alan gruplari kullanilir.</p>
+        </div>
+      </div>
+      <div id="fileNameRulesBody" class="rule-card-list"></div>
+    </section>
   </section>
 `;
 

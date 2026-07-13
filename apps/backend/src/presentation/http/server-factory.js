@@ -3,9 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 
-function createHttpServer({ application, publicDir, defaultScanDir, frontendConfig = {} }) {
+function createHttpServer({ application, reactDistDir, defaultScanDir, frontendConfig = {} }) {
   return http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host}`);
+    const reactBasePath = normalizeFrontendBasePath(frontendConfig.reactBasePath || "/app");
+    const reactBuildReady = Boolean(reactDistDir && fs.existsSync(path.join(reactDistDir, "index.html")));
 
     try {
       if (request.method === "GET" && url.pathname === "/app-config.js") {
@@ -18,6 +20,21 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
           }, null, 2)};`,
           "application/javascript; charset=utf-8",
         );
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/system/frontend-shell") {
+        sendApiSuccess(response, 200, {
+          apiBaseUrl: frontendConfig.apiBaseUrl || "",
+          defaultScanDir: frontendConfig.defaultScanDir || "",
+          legacyPath: "",
+          reactBasePath,
+          shellMode: "react-only",
+          buildReady: reactBuildReady,
+        }, {
+          contractVersion: "v1",
+          responseShape: "data-meta-error",
+        });
         return;
       }
 
@@ -305,6 +322,12 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/api/config/rule-resolver") {
+        const result = await application.getRuleResolverConfig.execute();
+        sendJson(response, 200, result);
+        return;
+      }
+
       if (request.method === "PUT" && url.pathname === "/api/config/file-name-rules") {
         const payload = await readJsonBody(request);
         const result = await application.saveFileNameRules.execute(payload);
@@ -338,26 +361,79 @@ function createHttpServer({ application, publicDir, defaultScanDir, frontendConf
         return;
       }
 
+      if (request.method === "GET" && isReactFrontendRequest(url.pathname, reactBasePath)) {
+        if (!reactDistDir || !fs.existsSync(reactDistDir)) {
+          sendText(
+            response,
+            503,
+            "Yeni frontend build edilmemis. Once apps/frontend/app icin build alin.",
+          );
+          return;
+        }
+
+        const reactFilePath = resolveReactFrontendFilePath(url.pathname, reactBasePath, reactDistDir);
+        if (!reactFilePath || !reactFilePath.startsWith(reactDistDir)) {
+          sendText(response, 403, "Erisim engellendi.");
+          return;
+        }
+
+        sendStaticFile(request, response, reactFilePath);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/") {
+        if (reactBuildReady) {
+          sendRedirect(response, `${reactBasePath}/operations-center`);
+          return;
+        }
+
+        sendText(
+          response,
+          503,
+          "Yeni frontend build edilmemis. Once apps/frontend/app icin build alin.",
+        );
+        return;
+      }
+
+      const migratedRouteRedirect = getMigratedRouteRedirect(url.pathname, reactBasePath);
+      if (request.method === "GET" && migratedRouteRedirect && reactBuildReady) {
+        sendRedirect(response, migratedRouteRedirect);
+        return;
+      }
+
       const isFrontendRoute = request.method === "GET"
         && !url.pathname.startsWith("/api/")
         && path.extname(url.pathname) === "";
 
-      const filePath = url.pathname === "/" || isFrontendRoute
-        ? path.join(publicDir, "index.html")
-        : path.join(publicDir, url.pathname);
+      if (isFrontendRoute) {
+        if (reactBuildReady) {
+          sendRedirect(response, `${reactBasePath}/operations-center`);
+          return;
+        }
 
-      if (!filePath.startsWith(publicDir)) {
-        sendText(response, 403, "Erisim engellendi.");
+        sendText(
+          response,
+          503,
+          "Yeni frontend build edilmemis. Once apps/frontend/app icin build alin.",
+        );
         return;
       }
 
-      sendStaticFile(request, response, filePath);
+      sendText(response, 404, "Dosya bulunamadi.");
     } catch (error) {
       sendJson(response, 500, {
         error: "Sunucu hatasi",
         detail: error.message,
       });
     }
+  });
+}
+
+function sendApiSuccess(response, statusCode, data, meta = {}) {
+  sendJson(response, statusCode, {
+    data,
+    meta,
+    error: null,
   });
 }
 
@@ -377,6 +453,14 @@ function sendText(response, statusCode, payload, contentType = "text/plain; char
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
   });
   response.end(payload);
+}
+
+function sendRedirect(response, location) {
+  response.writeHead(302, {
+    Location: location,
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  });
+  response.end();
 }
 
 function sendBinary(response, statusCode, payload, contentType, fileName) {
@@ -500,6 +584,65 @@ function createCompressionStream(extension, acceptsEncoding) {
   }
 
   return null;
+}
+
+function isReactFrontendRequest(pathname, reactBasePath) {
+  return pathname === reactBasePath || pathname.startsWith(`${reactBasePath}/`);
+}
+
+function resolveReactFrontendFilePath(pathname, reactBasePath, reactDistDir) {
+  const relativePath = pathname.slice(reactBasePath.length).replace(/^\/+/, "");
+  if (!relativePath || path.extname(relativePath) === "") {
+    return path.join(reactDistDir, "index.html");
+  }
+
+  return path.join(reactDistDir, relativePath);
+}
+
+function getMigratedRouteRedirect(pathname, reactBasePath) {
+  const routeMap = {
+    "/genel-bakis": `${reactBasePath}/dashboard`,
+    "/operasyon-merkezi": `${reactBasePath}/operations-center`,
+    "/kullanici-is-ekrani": `${reactBasePath}/user-workspace`,
+    "/erp-merkezi": `${reactBasePath}/erp-center`,
+    "/tarama-ve-is-akisi": `${reactBasePath}/workflow-builder`,
+    "/legacy/tarama-ve-is-akisi": `${reactBasePath}/workflow-builder`,
+    "/kurallar/dosya-tipleri": `${reactBasePath}/rules`,
+    "/kurallar/keyword": `${reactBasePath}/rules`,
+    "/kurallar/dosya-adi": `${reactBasePath}/rules`,
+    "/kurallar/override": `${reactBasePath}/rules`,
+    "/operasyon/acik-isler": `${reactBasePath}/operations-center`,
+    "/operasyon/audit": `${reactBasePath}/operations-center`,
+    "/operasyon/raporlar": `${reactBasePath}/dashboard`,
+    "/legacy/operasyon/acik-isler": `${reactBasePath}/operations-center`,
+    "/legacy/operasyon/audit": `${reactBasePath}/operations-center`,
+    "/legacy/operasyon/raporlar": `${reactBasePath}/dashboard`,
+    "/bilgi/surec-rehberi": `${reactBasePath}/dashboard`,
+    "/legacy/bilgi/surec-rehberi": `${reactBasePath}/dashboard`,
+    "/yonetim/ekip": `${reactBasePath}/operations-center`,
+    "/yonetim/ayarlar": `${reactBasePath}/operations-center`,
+    "/yonetim/veri": `${reactBasePath}/operations-center`,
+    "/yonetim/onay-kuyrugu": `${reactBasePath}/operations-center`,
+    "/yonetim/entegrasyonlar": `${reactBasePath}/operations-center`,
+    "/legacy/yonetim/ekip": `${reactBasePath}/operations-center`,
+    "/legacy/yonetim/ayarlar": `${reactBasePath}/operations-center`,
+    "/legacy/yonetim/veri": `${reactBasePath}/operations-center`,
+    "/legacy/yonetim/onay-kuyrugu": `${reactBasePath}/operations-center`,
+    "/legacy/yonetim/entegrasyonlar": `${reactBasePath}/operations-center`,
+  };
+
+  return routeMap[pathname] || null;
+}
+
+function normalizeFrontendBasePath(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed || trimmed === "/") {
+    return "/app";
+  }
+
+  return trimmed.endsWith("/")
+    ? trimmed.slice(0, -1)
+    : trimmed;
 }
 
 module.exports = {

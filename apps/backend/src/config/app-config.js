@@ -7,7 +7,9 @@ function createAppConfig({ rootPath }) {
 
   const host = String(process.env.APP_HOST || "127.0.0.1").trim();
   const port = Number(process.env.APP_PORT || 3000);
-  const publicDir = resolvePath(rootPath, process.env.FRONTEND_PUBLIC_DIR, path.join(rootPath, "apps", "frontend", "public"));
+  const frontendAppDir = resolvePath(rootPath, process.env.FRONTEND_APP_DIR, path.join(rootPath, "apps", "frontend", "app"));
+  const frontendReactDistDir = resolvePath(rootPath, process.env.FRONTEND_REACT_DIST_DIR, path.join(frontendAppDir, "dist"));
+  const frontendReactBasePath = normalizeBasePath(process.env.FRONTEND_REACT_BASE_PATH || "/app");
   const requestedDefaultScanDir = resolvePath(rootPath, process.env.DEFAULT_SCAN_DIR, path.join(rootPath, "IN26016_TARTIM KONVOYOR"));
   const defaultScanDir = fs.existsSync(requestedDefaultScanDir) ? requestedDefaultScanDir : rootPath;
   const dataDir = resolvePath(rootPath, process.env.DATA_DIR, path.join(rootPath, "data"));
@@ -20,12 +22,14 @@ function createAppConfig({ rootPath }) {
     },
     paths: {
       rootPath,
-      publicDir,
+      frontendAppDir,
+      frontendReactDistDir,
       defaultScanDir,
       dataDir,
     },
     frontend: {
       apiBaseUrl,
+      reactBasePath: frontendReactBasePath,
     },
     cadConversion: {
       enabled: normalizeBoolean(process.env.CAD_CONVERSION_ENABLED, false),
@@ -63,6 +67,18 @@ function normalizeBoolean(value, fallbackValue) {
 
   const normalized = String(value).trim().toLowerCase();
   return !["0", "false", "hayir", "no", "off"].includes(normalized);
+}
+
+function normalizeBasePath(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed || trimmed === "/") {
+    return "/app";
+  }
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.endsWith("/")
+    ? withLeadingSlash.slice(0, -1)
+    : withLeadingSlash;
 }
 
 module.exports = {

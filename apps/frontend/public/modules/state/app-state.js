@@ -7,6 +7,7 @@ window.appState = window.appState || {
   keywordRules: [],
   fileNameRules: [],
   overrides: [],
+  ruleResolverConfig: null,
   editingOverrideId: null,
   scanInsights: null,
   operations: {

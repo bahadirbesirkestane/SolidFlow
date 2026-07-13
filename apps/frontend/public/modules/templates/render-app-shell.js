@@ -1,23 +1,5 @@
-const APP_PAGE_RENDER_ORDER = [
-  "dashboard",
-  "projects",
-  "user-workspace",
-  "workflow-builder",
-  "erp-center",
-  "rule-file-types",
-  "rule-keywords",
-  "rule-file-names",
-  "rule-overrides",
-  "open-jobs-monitor",
-  "audit-center",
-  "reports-center",
-  "team-center",
-  "settings-center",
-  "data-center",
-  "approval-center",
-  "integration-center",
-  "process-guide",
-];
+const APP_PAGE_RENDER_ORDER = window.APP_PAGE_RENDER_ORDER || [];
+const DEFAULT_LEGACY_PAGE = APP_PAGE_RENDER_ORDER[0] || "workflow-builder";
 
 (function renderAppShell() {
   const root = document.getElementById("appRoot");
@@ -26,7 +8,7 @@ const APP_PAGE_RENDER_ORDER = [
   }
 
   const pagePanels = APP_PAGE_RENDER_ORDER.map((pageName) => `
-    <section class="page-panel ${pageName === "dashboard" ? "active" : ""}" data-page="${pageName}">
+    <section class="page-panel ${pageName === DEFAULT_LEGACY_PAGE ? "active" : ""}" data-page="${pageName}">
       ${window.APP_PAGE_TEMPLATES?.[pageName] || ""}
     </section>
   `).join("");

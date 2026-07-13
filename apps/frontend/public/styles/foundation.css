@@ -1,0 +1,172 @@
+.ui-page-frame,
+.ui-page-shell,
+.ui-card-grid,
+.ui-card,
+.ui-table-wrap,
+.ui-form-stack,
+.ui-form-grid,
+.ui-action-bar {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ui-page-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.ui-shell-header {
+  align-items: stretch;
+}
+
+.ui-card-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.ui-card-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-card-grid--sidebar {
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.ui-card,
+.ui-table-wrap {
+  width: 100%;
+}
+
+.ui-form-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.ui-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ui-form-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.ui-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ui-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ui-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.ui-table-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ui-table-wrap > table {
+  min-width: 100%;
+}
+
+.ui-table-wrap th,
+.ui-table-wrap td {
+  word-break: break-word;
+}
+
+.ui-field,
+.ui-form-stack input[type="text"],
+.ui-form-stack input[type="search"],
+.ui-form-stack input[type="number"],
+.ui-form-stack select,
+.ui-form-stack textarea,
+.ui-form-grid input[type="text"],
+.ui-form-grid input[type="search"],
+.ui-form-grid input[type="number"],
+.ui-form-grid select,
+.ui-form-grid textarea,
+.advance-grid input[type="text"],
+.advance-grid input[type="number"],
+.advance-grid select,
+.inline-grid input[type="text"],
+.inline-grid input[type="number"],
+.inline-grid select,
+.quick-step-card input,
+.quick-step-card select {
+  width: 100%;
+  min-width: 0;
+}
+
+.ui-form-stack input[type="text"],
+.ui-form-stack input[type="search"],
+.ui-form-stack input[type="number"],
+.ui-form-stack select,
+.ui-form-stack textarea,
+.ui-form-grid input[type="text"],
+.ui-form-grid input[type="search"],
+.ui-form-grid input[type="number"],
+.ui-form-grid select,
+.ui-form-grid textarea,
+.advance-grid input[type="text"],
+.advance-grid input[type="number"],
+.advance-grid select,
+.inline-grid input[type="text"],
+.inline-grid input[type="number"],
+.inline-grid select,
+.quick-step-card input,
+.quick-step-card select {
+  min-height: 44px;
+}
+
+.ui-min-select,
+select[multiple] {
+  min-width: 180px;
+}
+
+.ui-sticky-card {
+  position: sticky;
+  top: 0;
+}
+
+.ui-density-relaxed .table-header {
+  padding-bottom: 12px;
+}
+
+@media (max-width: 1200px) {
+  .ui-card-grid--sidebar,
+  .ui-card-grid--two,
+  .ui-form-grid,
+  .ui-form-grid--compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .ui-control-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ui-action-bar,
+  .ui-action-group {
+    align-items: stretch;
+  }
+
+  .ui-action-group > * {
+    width: 100%;
+  }
+}

@@ -47,10 +47,13 @@ function renderManagerDashboard() {
   dashboardStageBoard.innerHTML = Array.from(stageCounts.entries())
     .sort((left, right) => right[1] - left[1])
     .map(([stageName, count]) => `
-      <article class="manager-stage-card">
-        <span class="muted">${escapeHtml(stageName)}</span>
+      <article class="manager-stage-card adminlte-mini-card">
+        <div class="adminlte-mini-card-head">
+          <span class="badge warn">Aktif</span>
+          <span class="muted">Workflow</span>
+        </div>
         <strong>${escapeHtml(String(count))}</strong>
-        <span class="muted">iş akışı bu aşamada</span>
+        <span class="muted">${escapeHtml(stageName)}</span>
       </article>
     `)
     .join("");
@@ -81,7 +84,10 @@ function renderManagerDashboard() {
 
   dashboardAttentionList.innerHTML = [...attentionItems, ...delayedProjects].length > 0
     ? [...attentionItems, ...delayedProjects].map((item) => `
-      <article class="insight-card">
+      <article class="insight-card adminlte-feed-card">
+        <div class="adminlte-feed-card-head">
+          <span class="badge warn">Uyari</span>
+        </div>
         <strong>${escapeHtml(item.title)}</strong>
         <p class="muted">${escapeHtml(item.body)}</p>
       </article>
@@ -89,7 +95,7 @@ function renderManagerDashboard() {
     : `<div class="empty-state">Şu an öne çıkan risk görünmüyor.</div>`;
 
   dashboardProjectTracker.innerHTML = `
-    <table>
+    <table class="adminlte-table">
       <thead>
         <tr>
           <th>Proje</th>
@@ -106,15 +112,22 @@ function renderManagerDashboard() {
           return `
             <tr>
               <td>
-                <div class="cell-stack">
+                <div class="cell-stack adminlte-cell-stack">
                   <strong>${escapeHtml(dashboard.project.code)}</strong>
                   <span class="muted">${escapeHtml(dashboard.project.name)}</span>
                 </div>
               </td>
-              <td>%${escapeHtml(String(dashboard.progress.completionPercentage || 0))}</td>
+              <td>
+                <div class="adminlte-progress-cell">
+                  <strong>%${escapeHtml(String(dashboard.progress.completionPercentage || 0))}</strong>
+                  <div class="progress-rail slim">
+                    <div class="progress-rail-fill" style="width:${dashboard.progress.completionPercentage || 0}%"></div>
+                  </div>
+                </div>
+              </td>
               <td>${escapeHtml(String(dashboard.workflows.filter((workflow) => workflow.status !== "completed").length))}</td>
               <td>${escapeHtml(activeWorkflow?.currentStep?.name || "Tamamlanan akışlar")}</td>
-              <td>${escapeHtml(String(projectOpenJobs))}</td>
+              <td><span class="badge ${projectOpenJobs > 0 ? "warn" : "good"}">${escapeHtml(String(projectOpenJobs))}</span></td>
             </tr>
           `;
         }).join("")}

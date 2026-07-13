@@ -1,118 +1,84 @@
-# Solid Dosya Okuma
+# SolidDosyaOkuma
 
-Klasor ve dosya isimlerinden is akisi ureten, dosya tipi kurallari ve parca bazli override mantigi ile yonetilebilen Node.js uygulamasi.
+SolidWorks dosya ve klasor bilgisinden operasyonel kararlar, workflow ve raporlama ureten uygulama.
 
-## Proje Yapisi
+Bu repo artik yeni frontend uygulamasi ve tek backend omurgasi ile ilerler:
 
-Proje artik backend ve frontend olarak ayrilmistir:
+- `apps/backend/src`
+- `apps/frontend/app`
+- `data`
+- `docs`
 
-- `apps/backend/src`: API, domain, application, infrastructure ve presentation katmanlari
-- `apps/frontend/public`: tarayici arayuzu
-- `data`: SQLite ve seed/config verileri
+## Guncel Mimari Durum
 
-Backend ile frontend ayni uygulama icinde ancak ayri sorumluluklarda tutulur:
+### Backend
 
-- frontend tarayicida sadece UI ve API cagrilarini yonetir
-- backend `http://127.0.0.1:3000` uzerinden hem `/api/*` endpointlerini hem de frontend statik dosyalarini sunar
+Backend `Node.js` uzerinde calisir ve clean architecture hedefiyle su katmanlara ayrilir:
 
-Backend ic mimarisi clean architecture mantigi ile katmanlara ayrilmistir:
+- `domain`
+- `application`
+- `infrastructure`
+- `presentation`
 
-- `apps/backend/src/domain`: saf is kurallari
-- `apps/backend/src/application`: use-case katmani
-- `apps/backend/src/infrastructure`: dosya sistemi, veritabani ve repository uygulamalari
-- `apps/backend/src/presentation`: HTTP sunucu ve API katmani
+Backend hem API endpointlerini hem de frontend statik servis katmanini sunar.
 
-## Veri Katmani
+### Frontend
 
-Uygulama artik birincil veri kaynagi olarak:
+Frontend ana uygulama olarak:
 
-- `data/solid-workflow.db`
+- `apps/frontend/app`
+  - yeni `React + Vite + TypeScript` uygulamasi
+  - tum aktif ekranlar ve kalici gelistirme burada yapilir
 
-dosyasini kullanir.
+- `apps/frontend/public`
+  - arsivlenen legacy kaynaklar
+  - aktif uygulama render zincirinin parcasi degildir
 
-Ilk acilista mevcut JSON dosyalari otomatik migrate edilerek SQLite veritabanina seed edilir.
+Yeni frontend backend tarafindan `/app` altinda servis edilmek uzere tasarlanmistir.
+Build alinmadiysa backend `/` ve sayfa route'lari `503` ile yeni frontend build'inin eksik oldugunu bildirir.
 
-JSON dosyalari:
+Route sahipligi su sekilde netlestirilmistir:
 
-- `data/file-type-rules.json`
-- `data/keyword-rules.json`
-- `data/part-overrides.json`
+- `/`
+  - build varsa yeni shell'e yonlenir
+- `/app`
+  - yeni React shell
+- eski route'lar
+  - uygun yeni `/app/...` karsiligina yonlendirilir
 
-seed ve yedek amacli korunur.
+Yeni shell runtime durumu icin:
 
-## Yonetilebilir Alanlar
+- `GET /api/system/frontend-shell`
 
-### 1. Dosya Tipi Kurallari
+endpoint'i kullanilir. Bu endpoint yeni frontend icin `data / meta / error` shape gecisinin referans cevabidir.
 
-`data/file-type-rules.json`
+## Repo Yapisi
 
-Her uzanti icin:
+- `apps/backend/src`
+  - use-case, domain servisleri, repository implementasyonlari ve HTTP sunucu
+- `apps/frontend/app`
+  - yeni React frontend
+- `apps/frontend/public`
+  - aktif olmayan legacy kaynak arsivi
+- `data`
+  - SQLite ve seed/config dosyalari
+- `docs/architecture`
+  - mimari karar kayitlari
+- `docs/migration`
+  - migration checklist ve gecis rehberleri
 
-- gorunen ad
-- varsayilan surec
-- varsayilan hizmet tipi
-- aktif/pasif durumu
+## Gelistirme Kurali
 
-yonetilebilir.
+Bu repo icin birincil standart:
 
-### 2. Anahtar Kelime Kurallari
+- `PROJE_KURALLARI_VE_AGENT_MODU.md`
 
-`data/keyword-rules.json`
-
-Dosya adina gore daha akilli surec tahmini yapmak icin kullanilir.
-
-### 3. Parca Override
-
-`data/part-overrides.json`
-
-Belirli bir parca kodu veya dosya adi icin manuel surec ve hizmet atamasi yapar.
-
-## Arayuz Sekmeleri
-
-- `Operasyon Merkezi`
-- `Is Akisi`
-- `Dosya Tipleri`
-- `Keyword Kurallari`
-- `Parca Kurallari`
-
-### Operasyon Merkezi Neler Sunar
-
-- proje olusturma ve soldan secerek panel acma
-- departman bazli kullanici ekleme ve pasife alma
-- template'ten workflow ekleme
-- klasorden otomatik workflow uretme
-- workflow adimlarina ilgili departmandan bir veya birden cok kisiyi otomatik atama
-- adim durumu guncelleme, siradaki adima devir, not dusme
-- adim silindiginde otomatik `Acik Isler` alanina tasima
-- secili proje icin audit kayitlarini sag panelden izleme
-- secili proje icin `Excel`, `CSV` ve `PDF` operasyon raporu alma
-
-## Atama Kurallari Altyapisi
-
-`data/assignment-rules.json`
-
-dosyasi ile departman karsiligi olan ifade ve kisaltmalar yonetilebilir.
-
-Ornek:
-
-- `SA` -> `Satin Alma`
-- `M` -> `Montaj`
-- `DT` -> `Dis Hizmet`
-
-Bu dosya ileride UI uzerinden yonetilebilir hale getirilebilir.
-
-## Raporlama
-
-- Is akisi tablosundaki mevcut filtrelenmis gorunum `CSV Aktar` ile disari alinabilir.
-- Tum tarama sonucu `Excel Aktar` ile `.xlsx` olarak indirilebilir.
-- Parca override veya kural degisikliginden sonra tarama otomatik yenilenir.
+Yeni frontend gelistirmeleri legacy shell icine eklenmez.
+Yeni sayfa, route ve UI primitive'leri yalniz `apps/frontend/app` icinde gelistirilir.
 
 ## Calistirma
 
-Uygulamayi dogrudan `public\\index.html` olarak acmayin. Sunucu uzerinden calisir.
-
-1. `BASLAT.bat` dosyasina cift tiklayin
-2. veya terminalde:
+### Backend + yeni shell
 
 ```powershell
 npm start
@@ -120,233 +86,85 @@ npm start
 
 Ardindan:
 
-`http://127.0.0.1:3000`
+- ana uygulama: `http://127.0.0.1:3000/`
+- workflow builder: `http://127.0.0.1:3000/app/workflow-builder`
 
-adresini acin.
+### Yeni React frontend gelistirme
 
-## Tek Komutla Calistirma
-
-Kok dizinden:
+Kurulum:
 
 ```powershell
-npm start
+npm run frontend:install
 ```
 
-Bu komut:
+Gelisim sunucusu:
 
-- backend uygulamasini `apps/backend/src/server.js` uzerinden baslatir
-- frontend dosyalarini `apps/frontend/public` klasorunden yayinlar
-- boylece proje tek komutta butun olarak ayaga kalkar
-
-## Konfigurasyon
-
-Uygulama backend tarafinda `.env` dosyasi destekler. Ornek degiskenler icin:
-
-- `.env.example`
-
-Kullanilabilecek temel alanlar:
-
-- `APP_HOST`
-- `APP_PORT`
-- `DEFAULT_SCAN_DIR`
-- `DATA_DIR`
-- `FRONTEND_PUBLIC_DIR`
-- `FRONTEND_API_BASE_URL`
-
-Frontend API adresi artik tek yerden yonetilir:
-
-- backend `GET /app-config.js` endpointi ile runtime config yayinlar
-- frontend bu config'i yukleyip tum API isteklerinde ayni `apiBaseUrl` degerini kullanir
-
-## Gelistirme Notlari
-
-- Yeni endpoint eklerken once `application` katmanina use-case ekleyin.
-- Yeni veri kaynagi eklerken `infrastructure` katmaninda repository veya adapter olusturun.
-- Domain kurallarini `presentation` katmanina tasimayin.
-
-## Operasyonel Workflow Backend
-
-Bu backend ile bir proje icinde bir veya birden fazla sirali is akisi yonetilebilir.
-
-### Temel Mantik
-
-- Her proje birden fazla workflow instance icerebilir.
-- Her workflow instance bir template'ten uretilir.
-- Her workflow step sirayla ilerler.
-- Bir step tamamlandiginda bir sonraki step `ready` olur.
-- Toplam proje ilerlemesi tum workflow step'lerinin tamamlanma oranindan hesaplanir.
-
-### Hazir Template'ler
-
-- `template-procurement-flow`
-- `template-outsource-part-flow`
-
-### Backend Endpointleri
-
-#### Workflow Template Listele
-
-`GET /api/operations/workflow-templates`
-
-#### Kullanici ve Departmanlari Listele
-
-`GET /api/operations/users`
-
-Donen veri:
-
-- `departments`
-- `users`
-
-#### Kullanici Ekle
-
-`POST /api/operations/users`
-
-#### Kullaniciyi Pasife Al
-
-`DELETE /api/operations/users/:userId`
-
-#### Proje Olustur
-
-`POST /api/operations/projects`
-
-Ornek body:
-
-```json
-{
-  "code": "PRJ-001",
-  "name": "Tartim Konveyor Projesi",
-  "description": "Ornek operasyon projesi",
-  "autoGenerateFromFolder": "C:\\Users\\...\\IN26016_TARTIM KONVOYOR"
-}
+```powershell
+npm run frontend:dev
 ```
 
-`autoGenerateFromFolder` verilirse sistem klasoru tarar ve uygun workflow instance'larini otomatik olusturur.
+Build:
 
-#### Projeleri Listele
-
-`GET /api/operations/projects`
-
-#### Proje Dashboard
-
-`GET /api/operations/projects/:projectId`
-
-Donen veri:
-
-- proje bilgisi
-- toplu ilerleme yuzdesi
-- workflow listesi
-- her workflow'un mevcut step'i
-
-#### Projeye Toplu Workflow Ekle
-
-`POST /api/operations/projects/:projectId/workflow-instances`
-
-Ornek body:
-
-```json
-{
-  "workflows": [
-    {
-      "templateId": "template-procurement-flow",
-      "instanceName": "Motor siparis sureci",
-      "itemLabel": "Motor Grubu",
-      "itemCount": 3,
-      "itemPayload": {
-        "partCodes": ["1150", "1152", "1153"]
-      },
-      "stepAssignments": [
-        { "sequenceNo": 1, "assignee": "Ayse" },
-        { "sequenceNo": 2, "assignee": "Mehmet" }
-      ]
-    }
-  ]
-}
+```powershell
+npm run frontend:build
 ```
 
-#### Aktif Adimi Tamamla ve Sonrakine Devret
+Typecheck:
 
-`POST /api/operations/workflow-instances/:instanceId/advance`
-
-Ornek body:
-
-```json
-{
-  "completedBy": "Ayse",
-  "note": "Siparis verildi",
-  "handoverTo": "Mehmet",
-  "nextAssignee": "Mehmet",
-  "nextAssigneeIds": ["user-mehmet"]
-}
+```powershell
+npm run frontend:typecheck
 ```
 
-#### Workflow'a Yeni Adim Ekle
+Lint:
 
-`POST /api/operations/workflow-instances/:instanceId/steps`
-
-#### Workflow Adimi Guncelle
-
-`PATCH /api/operations/workflow-instance-steps/:stepId`
-
-Guncellenebilir alanlar:
-
-- `name`
-- `description`
-- `status`
-- `assigneeIds`
-- `isOptional`
-- `note`
-
-#### Workflow Adimini Sil ve Acik Islere Tasima
-
-`DELETE /api/operations/workflow-instance-steps/:stepId`
-
-Silinen adim otomatik olarak `open_jobs` alanina tasinir.
-
-#### Acik Isleri Listele
-
-`GET /api/operations/open-jobs`
-
-#### Proje Audit Kayitlari
-
-`GET /api/operations/projects/:projectId/audit-events`
-
-#### Proje Icin Otomatik Workflow Uret
-
-`POST /api/operations/projects/:projectId/bootstrap-workflows`
-
-Ornek body:
-
-```json
-{
-  "folderPath": "C:\\Users\\...\\IN26016_TARTIM KONVOYOR"
-}
+```powershell
+npm run frontend:lint
 ```
 
-### Step Statusleri
+Backend acikken ve frontend build alindiginda yeni shell su rotadan acilir:
 
-- `pending`
-- `ready`
-- `in_progress`
-- `completed`
+- `http://127.0.0.1:3000/app`
 
-### Veritabani
+Tasinmis eski legacy route'lar artik yeni shell'e yonlendirilir:
 
-Operasyonel workflow tablolari:
+- `/genel-bakis` -> `/app/dashboard`
+- `/operasyon-merkezi` -> `/app/operations-center`
+- `/kullanici-is-ekrani` -> `/app/user-workspace`
+- `/erp-merkezi` -> `/app/erp-center`
+- `/tarama-ve-is-akisi` -> `/app/workflow-builder`
+- `/kurallar/*` -> `/app/rules`
 
-- `workflow_templates`
-- `workflow_template_steps`
-- `departments`
-- `users`
-- `projects`
-- `workflow_instances`
-- `workflow_instance_steps`
-- `workflow_step_assignees`
-- `open_jobs`
-- `audit_events`
+## Root Scriptler
 
-## Sorun Giderme
+- `npm start`
+- `npm run start:backend`
+- `npm run test:backend`
+- `npm run frontend:install`
+- `npm run frontend:dev`
+- `npm run frontend:build`
+- `npm run frontend:typecheck`
+- `npm run frontend:lint`
 
-`Failed to fetch` hatasi alirsaniz genelde nedenlerden biri sudur:
+## Test ve Kalite
 
-- Sunucu calismiyordur
-- Sayfa `file://` olarak acilmistir
-- Tarayicida yanlis adres acilmistir
+Asgari kalite kapilari:
+
+- backend testleri
+- frontend typecheck
+- frontend build
+- frontend lint
+
+Yeni mimaride bir ekran tamamlanmis sayilmaz:
+
+- typed route config'e baglanmadan
+- empty/loading/error state eklenmeden
+- responsive kontrol yapilmadan
+- legacy render yolu temizlenmeden
+
+## Ilgili Belgeler
+
+- `PROJE_KURALLARI_VE_AGENT_MODU.md`
+- `docs/architecture/ADR-0001-frontend-reset.md`
+- `docs/migration/frontend-migration-checklist.md`
+- `apps/frontend/README.md`
+- `apps/backend/README.md`

@@ -1,6 +1,8 @@
+const LEGACY_FALLBACK_PAGE = "workflow-builder";
+
 function normalizeRoutePath(pathname) {
   if (!pathname || pathname === "/") {
-    return PAGE_REGISTRY.dashboard.path;
+    return PAGE_REGISTRY[LEGACY_FALLBACK_PAGE]?.path || "/legacy/tarama-ve-is-akisi";
   }
 
   return pathname.endsWith("/") && pathname.length > 1
@@ -9,11 +11,11 @@ function normalizeRoutePath(pathname) {
 }
 
 function getPathForPage(pageName) {
-  return PAGE_REGISTRY[pageName]?.path || PAGE_REGISTRY.dashboard.path;
+  return PAGE_REGISTRY[pageName]?.path || PAGE_REGISTRY[LEGACY_FALLBACK_PAGE]?.path || "/legacy/tarama-ve-is-akisi";
 }
 
 function getPageForPath(pathname) {
-  return PAGE_PATH_LOOKUP[normalizeRoutePath(pathname)] || "dashboard";
+  return PAGE_PATH_LOOKUP[normalizeRoutePath(pathname)] || LEGACY_FALLBACK_PAGE;
 }
 
 function getPageFromLegacyHash(hashValue) {
@@ -21,11 +23,11 @@ function getPageFromLegacyHash(hashValue) {
 }
 
 function getPageMeta(pageName) {
-  return PAGE_REGISTRY[pageName] || PAGE_REGISTRY.dashboard;
+  return PAGE_REGISTRY[pageName] || PAGE_REGISTRY[LEGACY_FALLBACK_PAGE];
 }
 
 function navigateToPage(pageName, options = {}) {
-  const targetPage = PAGE_REGISTRY[pageName] ? pageName : "dashboard";
+  const targetPage = PAGE_REGISTRY[pageName] ? pageName : LEGACY_FALLBACK_PAGE;
   const targetPath = getPathForPage(targetPage);
   const currentPath = normalizeRoutePath(window.location.pathname);
 
@@ -53,6 +55,7 @@ function syncPageChrome(pageName) {
   const titleElement = document.getElementById("pageHeaderTitle");
   const descriptionElement = document.getElementById("pageHeaderDescription");
   const breadcrumbElement = document.getElementById("pageHeaderPath");
+  const topbarTitleElement = document.getElementById("topbarSectionTitle");
 
   document.title = `SolidFlow | ${pageMeta.title}`;
 
@@ -66,5 +69,9 @@ function syncPageChrome(pageName) {
 
   if (breadcrumbElement) {
     breadcrumbElement.textContent = pageMeta.path;
+  }
+
+  if (topbarTitleElement) {
+    topbarTitleElement.textContent = pageMeta.title;
   }
 }

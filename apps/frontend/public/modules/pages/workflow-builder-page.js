@@ -134,7 +134,7 @@ function renderRows(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
     workflowResultsBody.innerHTML = `
       <tr>
-        <td colspan="9" class="muted">Henüz iş akışı sonucu yok. Sayfa açıldığında klasör bilgisi varsa ilk tarama otomatik yapılır.</td>
+        <td colspan="11" class="muted">Henüz iş akışı sonucu yok. Sayfa açıldığında klasör bilgisi varsa ilk tarama otomatik yapılır.</td>
       </tr>
     `;
     renderPagination("workflow", [], workflowPaginationContainer);
@@ -159,6 +159,18 @@ function renderRows(rows) {
         <td>${escapeHtml(row.suggestedProcess)}</td>
         <td>${escapeHtml(row.serviceType)}</td>
         <td><span class="badge ${badgeClass}">${escapeHtml(row.confidence)}</span></td>
+        <td>
+          <div class="cell-stack">
+            <strong>${escapeHtml(row.matchedBy || "-")}</strong>
+            <span class="muted">${escapeHtml(row.matchedRuleId || row.reason || "-")}</span>
+          </div>
+        </td>
+        <td>
+          <div class="cell-stack">
+            <strong>${escapeHtml(row.routingKey || "-")}</strong>
+            <span class="muted">${escapeHtml(row.routingDecision?.candidateGroup || "-")}</span>
+          </div>
+        </td>
         <td>
           <button
             class="secondary link-button"
@@ -332,6 +344,7 @@ function renderScanInsights(insights) {
     createStatCard("Belirsiz dosya", String(quality.uncertainFiles || 0), (quality.uncertainFiles || 0) > 0 ? "warning" : ""),
     createStatCard("Dosya adı dönüşümü", String(quality.transformedFiles || 0)),
     createStatCard("Override", String(quality.manualOverrides || 0)),
+    createStatCard("Routing kuralı", String(Object.keys(insights.routingRuleHits || {}).length || 0)),
     createStatCard("Kesin eşleşme", String(quality.exactMatches || 0)),
     createStatCard("Tahmini eşleşme", String(quality.estimatedMatches || 0)),
   ].join("");
@@ -476,7 +489,7 @@ async function handleBulkWorkOrderSubmit(event) {
 
     await loadOperationsData();
     await loadSelectedProject(result.project.id);
-    navigateToPage("projects");
+    window.location.assign("/app/operations-center");
     setBulkWorkOrderStatus(`${result.project.code} için ${result.workflows.length} workflow oluşturuldu.`);
     setOperationsStatus(`${result.project.name} operasyona aktarıldı. Dosya, süreç ve kullanıcı yerleşimini proje panelinden inceleyebilirsin.`);
   } catch (error) {

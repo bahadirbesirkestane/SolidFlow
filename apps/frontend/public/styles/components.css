@@ -184,7 +184,7 @@
 
 .advance-grid {
   display: grid;
-  grid-template-columns: minmax(150px, 200px) minmax(180px, 240px) minmax(220px, 1fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   align-items: start;
 }
@@ -270,6 +270,356 @@ select.inline-input {
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.06), transparent 24%),
     linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.panel.page-shell.table-page-shell,
+.placeholder-card,
+.project-card,
+.workflow-card,
+.ops-block,
+.stat-card {
+  background: #fff;
+}
+
+.page-section-intro h2,
+.content-header-copy h1,
+.shell-insight-card strong {
+  color: #22313f;
+}
+
+.shortcut-chip {
+  border-radius: 8px;
+  background: #f5f8fb;
+  border-color: #d7e2eb;
+  color: #3c8dbc;
+}
+
+.shortcut-chip:hover {
+  background: #eef4f8;
+}
+
+.status,
+.advanced-note,
+.part-list-note,
+.task-assignee-note,
+.page-topbar-note {
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.adminlte-page {
+  gap: 18px;
+}
+
+.adminlte-section-intro h2 {
+  font-size: 1.55rem;
+}
+
+.adminlte-card {
+  border-top: 3px solid #3c8dbc;
+}
+
+.adminlte-card-header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.adminlte-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.adminlte-kpi-grid .stat-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 122px;
+  border-top: 3px solid #3c8dbc;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+}
+
+.adminlte-kpi-grid .stat-card::after {
+  content: "";
+  position: absolute;
+  right: -18px;
+  bottom: -18px;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: rgba(60, 141, 188, 0.09);
+}
+
+.adminlte-two-column-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adminlte-stage-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.adminlte-mini-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #e3eaf1;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfe 100%);
+}
+
+.adminlte-mini-card strong {
+  font-size: 1.8rem;
+  color: #22313f;
+  line-height: 1;
+}
+
+.adminlte-mini-card-head,
+.adminlte-feed-card-head,
+.adminlte-project-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.adminlte-feed-card,
+.adminlte-card-section {
+  border: 1px solid #e3eaf1;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfe 100%);
+}
+
+.adminlte-feed-card {
+  padding: 16px;
+}
+
+.adminlte-list-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.adminlte-table-wrap {
+  border-radius: 12px;
+}
+
+.adminlte-table {
+  min-width: 100%;
+}
+
+.adminlte-table thead th {
+  background: #f5f8fb;
+  color: #526273;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.74rem;
+}
+
+.adminlte-cell-stack strong {
+  color: #22313f;
+}
+
+.adminlte-progress-cell {
+  display: grid;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.adminlte-project-list {
+  gap: 12px;
+}
+
+.adminlte-project-card {
+  gap: 12px;
+  border: 1px solid #dde6ef;
+  border-left: 4px solid transparent;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+}
+
+.adminlte-project-card:hover {
+  border-left-color: #3c8dbc;
+}
+
+.adminlte-project-card.active {
+  border-left-color: #3c8dbc;
+}
+
+.adminlte-project-card-meta {
+  justify-content: space-between;
+}
+
+.adminlte-user-directory,
+.adminlte-form-stack {
+  gap: 12px;
+}
+
+.adminlte-highlight-card {
+  min-width: 180px;
+  border-top: 3px solid #00a65a;
+  background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
+}
+
+.adminlte-form-panel {
+  border: 1px solid #e3eaf1;
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.adminlte-empty-panel {
+  border: 1px dashed #cfd8e3;
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.operations-project-tile {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.operations-project-tile:hover {
+  transform: translateY(-1px);
+  border-color: #9cc1db;
+}
+
+.operations-project-tile.active {
+  border-color: #3c8dbc;
+  box-shadow: 0 10px 24px rgba(60, 141, 188, 0.14);
+}
+
+.operations-project-tile-top,
+.operations-project-tile-meta,
+.rule-editor-card-head,
+.rule-editor-card-actions,
+.operations-inline-field,
+.operations-form-actions,
+.ops-hero-actions,
+.operations-rail-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.operations-project-tile-top,
+.rule-editor-card-head {
+  justify-content: space-between;
+}
+
+.operations-project-tile-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #22313f;
+}
+
+.operations-project-tile-meta {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.operations-inline-field {
+  align-items: stretch;
+}
+
+.operations-inline-field > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.operations-inline-field > button {
+  flex-shrink: 0;
+}
+
+.rule-editor-card {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #dbe4ee;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.rule-editor-grid,
+.operations-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.operations-form-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rule-span-2,
+.operations-form-span {
+  grid-column: span 2;
+}
+
+.rule-editor-card label,
+.operations-form-grid label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rule-editor-card label span,
+.operations-form-grid label span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.rule-title-input {
+  min-height: 46px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.rule-active-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.rule-card-empty {
+  padding: 26px;
+  border: 1px dashed #cfd8e3;
+  border-radius: 18px;
+  background: #fbfdff;
+}
+
+.rule-editor-card .inline-input,
+.rule-editor-card select,
+.rule-editor-card input,
+.operations-subform input,
+.operations-subform select,
+.operations-workflow-card input,
+.operations-workflow-card select {
+  width: 100%;
+  min-width: 0;
+}
+
+.operations-project-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  border: 1px dashed #cfd8e3;
+  border-radius: 14px;
+  background: #fbfdff;
+  color: var(--text-muted);
 }
 
 .model-preview-empty {
