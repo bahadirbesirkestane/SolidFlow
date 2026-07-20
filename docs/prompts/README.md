@@ -33,6 +33,11 @@ Bu klasor, projeyi yeni `React + Vite + TypeScript` shell ustunde gercek kullani
 10. [step-10-task-actions-history-and-admin-observability.md](./step-10-task-actions-history-and-admin-observability.md)
 11. [step-11-centralized-rule-management-and-routing-governance.md](./step-11-centralized-rule-management-and-routing-governance.md)
 12. [step-12-fair-scoring-performance-and-production-readiness.md](./step-12-fair-scoring-performance-and-production-readiness.md)
+13. [step-13-manual-workboard-foundation.md](./step-13-manual-workboard-foundation.md)
+14. [step-14-manual-workboard-management-ui.md](./step-14-manual-workboard-management-ui.md)
+15. [step-15-manual-workboard-display-and-hardening.md](./step-15-manual-workboard-display-and-hardening.md)
+16. [step-16-file-distribution-and-copy-pipeline.md](./step-16-file-distribution-and-copy-pipeline.md)
+17. [step-16-file-distribution-execution-prompt.md](./step-16-file-distribution-execution-prompt.md)
 
 ## Uygulama Ilkesi
 
