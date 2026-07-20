@@ -1,4 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
+import { Group, Input, Stack } from "@mantine/core";
 
 type FormFieldProps = PropsWithChildren<{
   label: string;
@@ -8,11 +9,11 @@ type FormFieldProps = PropsWithChildren<{
 
 export function FormField({ label, hint, actions, children }: FormFieldProps) {
   return (
-    <label className="form-field">
-      <span className="form-field__label">{label}</span>
-      {children}
-      {hint ? <span className="form-field__hint">{hint}</span> : null}
-      {actions ? <span className="form-field__actions">{actions}</span> : null}
-    </label>
+    <Input.Wrapper className="form-field" label={label} description={hint}>
+      <Stack gap={6}>
+        {children}
+        {actions ? <Group className="form-field__actions" gap="xs">{actions}</Group> : null}
+      </Stack>
+    </Input.Wrapper>
   );
 }

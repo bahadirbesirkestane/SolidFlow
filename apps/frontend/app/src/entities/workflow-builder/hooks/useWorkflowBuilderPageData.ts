@@ -16,6 +16,8 @@ type BulkFormState = {
   description: string;
 };
 
+const LAST_SCAN_FOLDER_KEY = "solidflow:last-scan-folder";
+
 export type EditablePartListItem = ScanPartListItem & {
   sourceIndex: number;
 };
@@ -23,7 +25,7 @@ export type EditablePartListItem = ScanPartListItem & {
 export function useWorkflowBuilderPageData() {
   const queryClient = useQueryClient();
   const shellConfigQuery = useFrontendShellConfig();
-  const [folderPath, setFolderPath] = useState("");
+  const [folderPath, setFolderPath] = useState(() => readStoredPath(LAST_SCAN_FOLDER_KEY));
   const [scanResult, setScanResult] = useState<ScanProjectResponse | null>(null);
   const [partList, setPartList] = useState<ScanPartListItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,6 +42,12 @@ export function useWorkflowBuilderPageData() {
       setFolderPath(shellConfigQuery.data.defaultScanDir);
     }
   }, [folderPath, shellConfigQuery.data?.defaultScanDir]);
+
+  useEffect(() => {
+    if (folderPath.trim()) {
+      storePath(LAST_SCAN_FOLDER_KEY, folderPath);
+    }
+  }, [folderPath]);
 
   const scanMutation = useMutation({
     mutationFn: (nextFolderPath: string) => scanProject(nextFolderPath),
@@ -67,6 +75,7 @@ export function useWorkflowBuilderPageData() {
     onSuccess: (result) => {
       if (result.selectedPath) {
         setFolderPath(result.selectedPath);
+        storePath(LAST_SCAN_FOLDER_KEY, result.selectedPath);
       }
     },
   });
@@ -328,4 +337,20 @@ function triggerBrowserDownload(blob: Blob, fileName: string) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+function readStoredPath(key: string) {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return String(window.localStorage.getItem(key) || "");
+}
+
+function storePath(key: string, value: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(key, value);
 }

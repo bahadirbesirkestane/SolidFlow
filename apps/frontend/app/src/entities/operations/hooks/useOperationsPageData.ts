@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAssignmentRules } from "@/entities/rules/api/rules-api";
+import { resolveWorkflowStepWarning } from "@/entities/rules/lib/sla-utils";
 import {
   type UserRecord,
   createProject,
@@ -24,6 +26,10 @@ export function useOperationsPageData() {
   const openJobsQuery = useQuery({
     queryKey: ["operations", "openJobs"],
     queryFn: listOpenJobs,
+  });
+  const assignmentRulesQuery = useQuery({
+    queryKey: ["operations", "assignmentRules"],
+    queryFn: getAssignmentRules,
   });
   const effectiveProjectId = selectedProjectId || projectsQuery.data?.[0]?.id || null;
 
@@ -71,6 +77,26 @@ export function useOperationsPageData() {
     () => [...(auditQuery.data || [])].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
     [auditQuery.data],
   );
+  const workflowWarnings = useMemo(() => {
+    const workflows = projectDashboardQuery.data?.workflows || [];
+    return workflows.flatMap((workflow) => {
+      const currentStep = workflow.currentStep;
+      if (!currentStep || (currentStep.status !== "ready" && currentStep.status !== "in_progress")) {
+        return [];
+      }
+
+      const warning = resolveWorkflowStepWarning(
+        workflow,
+        currentStep,
+        assignmentRulesQuery.data?.workflowSlaRules || [],
+      );
+
+      return [{
+        workflowId: workflow.id,
+        warning,
+      }];
+    });
+  }, [assignmentRulesQuery.data?.workflowSlaRules, projectDashboardQuery.data?.workflows]);
   const usersByDepartment = useMemo(() => {
     const departments = usersQuery.data?.departments || [];
     const users = usersQuery.data?.users || [];
@@ -113,10 +139,11 @@ export function useOperationsPageData() {
       completionPercentage: dashboard?.progress.completionPercentage || 0,
       completedSteps: dashboard?.progress.completedSteps || 0,
       openJobCount: projectOpenJobs.length,
+      warningWorkflowCount: workflowWarnings.filter((item) => item.warning.isWarning).length,
       totalSteps: dashboard?.progress.totalSteps || 0,
       workflowCount: dashboard?.workflows.length || 0,
     };
-  }, [activeUsers.length, auditEvents.length, projectDashboardQuery.data, projectOpenJobs.length]);
+  }, [activeUsers.length, auditEvents.length, projectDashboardQuery.data, projectOpenJobs.length, workflowWarnings]);
   const railMetrics = useMemo(
     () => ({
       activeProjects: (projectsQuery.data || []).length,
@@ -136,6 +163,7 @@ export function useOperationsPageData() {
       projectsQuery.refetch(),
       usersQuery.refetch(),
       openJobsQuery.refetch(),
+      assignmentRulesQuery.refetch(),
       effectiveProjectId ? projectDashboardQuery.refetch() : Promise.resolve(),
       effectiveProjectId ? auditQuery.refetch() : Promise.resolve(),
     ]);
@@ -145,6 +173,7 @@ export function useOperationsPageData() {
     activeUsers,
     auditQuery,
     auditEvents,
+    assignmentRulesQuery,
     createProjectMutation,
     effectiveProjectId,
     projectOpenJobs,
@@ -158,6 +187,7 @@ export function useOperationsPageData() {
     setSelectedProjectId,
     usersQuery,
     usersByDepartment,
+    workflowWarnings,
     workspaceMetrics,
   };
 }

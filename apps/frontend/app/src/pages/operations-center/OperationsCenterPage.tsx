@@ -70,10 +70,11 @@ export function OperationsCenterPage() {
     setSelectedProjectId,
     usersByDepartment,
     usersQuery,
+    workflowWarnings,
     workspaceMetrics,
   } = useOperationsPageData();
   const [drawerMode, setDrawerMode] = useState<"jobs" | "audit" | null>(null);
-  const [workflowFilter, setWorkflowFilter] = useState<"active" | "completed" | "all">("active");
+  const [workflowFilter, setWorkflowFilter] = useState<"active" | "completed" | "risk" | "all">("active");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
   const [workflowEditor, setWorkflowEditor] = useState({
     status: "ready",
@@ -107,10 +108,18 @@ export function OperationsCenterPage() {
       return workflows;
     }
 
+    if (workflowFilter === "risk") {
+      return workflows.filter((workflow) => {
+        const matchedWarning = workflowWarnings.find((item) => item.workflowId === workflow.id);
+        return Boolean(matchedWarning?.warning.isWarning);
+      });
+    }
+
     return workflows.filter((workflow) => workflow.status !== "completed");
-  }, [workflowFilter, workflows]);
+  }, [workflowFilter, workflowWarnings, workflows]);
   const selectedWorkflow = workflows.find((workflow) => workflow.id === selectedWorkflowId) || null;
   const selectedWorkflowCurrentStep = selectedWorkflow?.currentStep || null;
+  const selectedWorkflowWarning = workflowWarnings.find((item) => item.workflowId === selectedWorkflowId)?.warning || null;
   const workflowAuditEvents = useMemo(() => {
     if (!selectedWorkflow) {
       return [];
@@ -452,6 +461,11 @@ export function OperationsCenterPage() {
                       <strong>{workspaceMetrics.auditCount}</strong>
                       <small>Son hareketler asagida</small>
                     </article>
+                    <article className="metric-panel">
+                      <span>SLA Riski</span>
+                      <strong>{workspaceMetrics.warningWorkflowCount}</strong>
+                      <small>warningHours esigini gecen akis</small>
+                    </article>
                   </div>
                 </div>
 
@@ -470,6 +484,9 @@ export function OperationsCenterPage() {
                           <button type="button" className={workflowFilter === "completed" ? "is-active" : ""} onClick={() => setWorkflowFilter("completed")}>
                             Tamamlanan
                           </button>
+                          <button type="button" className={workflowFilter === "risk" ? "is-active" : ""} onClick={() => setWorkflowFilter("risk")}>
+                            Riskli
+                          </button>
                           <button type="button" className={workflowFilter === "all" ? "is-active" : ""} onClick={() => setWorkflowFilter("all")}>
                             Tum Liste
                           </button>
@@ -486,6 +503,7 @@ export function OperationsCenterPage() {
                                 <th>Siradaki Adim</th>
                                 <th>Sorumlu</th>
                                 <th>Durum</th>
+                                <th>SLA</th>
                                 <th>Ilerleme</th>
                                 <th>Aksiyon</th>
                               </tr>
@@ -493,6 +511,7 @@ export function OperationsCenterPage() {
                             <tbody>
                               {filteredWorkflows.map((workflow) => {
                                 const currentStep = workflow.currentStep;
+                                const warning = workflowWarnings.find((item) => item.workflowId === workflow.id)?.warning || null;
                                 const assigneeNames = (currentStep?.assigneeIds || [])
                                   .map((userId) => activeUsers.find((user) => user.id === userId)?.fullName || userId)
                                   .join(", ");
@@ -510,6 +529,7 @@ export function OperationsCenterPage() {
                                     <td>{currentStep?.name || "Tum adimlar tamamlandi"}</td>
                                     <td>{assigneeNames || "Atama beklenmiyor"}</td>
                                     <td>{formatWorkflowStatus(currentStep?.status || workflow.status)}</td>
+                                    <td>{warning?.isWarning ? "Riskte" : currentStep ? "Normal" : "-"}</td>
                                     <td>%{workflow.progressPercent}</td>
                                     <td>
                                       <div className="table-action-row" onClick={(event) => event.stopPropagation()}>
@@ -679,6 +699,11 @@ export function OperationsCenterPage() {
       >
         {selectedWorkflow ? (
           <div className="stack-list">
+            {selectedWorkflowWarning?.isWarning ? (
+              <StatusBanner tone="danger">
+                SLA uyarisi: {formatHours(selectedWorkflowWarning.elapsedHours)} gecti. Uyari esigi {formatHours(selectedWorkflowWarning.warningHours)}.
+              </StatusBanner>
+            ) : null}
             <article className="simple-list-card">
               <div className="inline-meta">
                 <strong>{selectedWorkflow.itemLabel || selectedWorkflow.name}</strong>
@@ -687,6 +712,38 @@ export function OperationsCenterPage() {
               <p>{selectedWorkflow.templateName || "Workflow"}</p>
               <small>{selectedWorkflow.steps.length} adim</small>
             </article>
+
+            {selectedWorkflowWarning ? (
+              <article className="workspace-panel">
+                <div className="workspace-panel__header">
+                  <div>
+                    <h3>SLA Durumu</h3>
+                    <p>Secili isin aktif adimi icin hedef ve warning bilgisi</p>
+                  </div>
+                </div>
+                <div className="rules-three-column">
+                  <div className="simple-list-card">
+                    <strong>Hedef Sure</strong>
+                    <p>{formatHours(selectedWorkflowWarning.targetHours)}</p>
+                    <small>{selectedWorkflowWarning.matchedRuleLabel}</small>
+                  </div>
+                  <div className="simple-list-card">
+                    <strong>Uyari Esigi</strong>
+                    <p>{formatHours(selectedWorkflowWarning.warningHours)}</p>
+                    <small>Kritik takip baslangici</small>
+                  </div>
+                  <div className="simple-list-card">
+                    <strong>Gecen Sure</strong>
+                    <p>{formatHours(selectedWorkflowWarning.elapsedHours)}</p>
+                    <small>
+                      {selectedWorkflowWarning.isWarning
+                        ? "Esik asildi"
+                        : `${formatHours(Math.max(selectedWorkflowWarning.remainingHours, 0))} kaldi`}
+                    </small>
+                  </div>
+                </div>
+              </article>
+            ) : null}
 
             <article className="workspace-panel">
               <div className="workspace-panel__header">
@@ -793,4 +850,12 @@ export function OperationsCenterPage() {
       </DrawerPanel>
     </PageShell>
   );
+}
+
+function formatHours(value?: number) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${Math.round((Number(value) || 0) * 10) / 10} sa`;
 }

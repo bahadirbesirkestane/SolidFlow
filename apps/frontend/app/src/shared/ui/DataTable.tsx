@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ScrollArea, Table } from "@mantine/core";
 
 type Column<T> = {
   key: string;
@@ -18,25 +19,25 @@ export function DataTable<T>({ rows, columns, emptyText }: DataTableProps<T>) {
   }
 
   return (
-    <div className="data-table">
-      <table>
-        <thead>
-          <tr>
+    <ScrollArea className="data-table">
+      <Table striped highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+        <Table.Thead>
+          <Table.Tr>
             {columns.map((column) => (
-              <th key={column.key}>{column.header}</th>
+              <Table.Th key={column.key}>{column.header}</Table.Th>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
+            <Table.Tr key={rowIndex}>
               {columns.map((column) => (
-                <td key={column.key}>{column.render(row)}</td>
+                <Table.Td key={column.key}>{column.render(row)}</Table.Td>
               ))}
-            </tr>
+            </Table.Tr>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </Table.Tbody>
+      </Table>
+    </ScrollArea>
   );
 }

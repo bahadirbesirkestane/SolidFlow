@@ -7,6 +7,9 @@ import { ErpCenterPage } from "@/pages/erp/ErpCenterPage";
 import { UserWorkspacePage } from "@/pages/user-workspace/UserWorkspacePage";
 import { WorkflowBuilderPage } from "@/pages/workflow-builder/WorkflowBuilderPage";
 import { UserManagementPage } from "@/pages/user-management/UserManagementPage";
+import { ManualWorkboardsPage } from "@/pages/manual-workboards/ManualWorkboardsPage";
+import { FileDistributionPage } from "@/pages/file-distribution/FileDistributionPage";
+import { SegmentRulesPage } from "@/pages/segment-rules/SegmentRulesPage";
 
 export type AppRouteDefinition = {
   key: string;
@@ -47,6 +50,15 @@ export const appRoutes: AppRouteDefinition[] = [
     allowedRoles: ["admin", "manager", "worker"],
   },
   {
+    key: "manual-workboards",
+    path: "/manual-workboards",
+    title: "Manuel Is Panosu",
+    section: "Ana Ekranlar",
+    description: "Kart agaci ile manuel is yonetimi",
+    element: <ManualWorkboardsPage />,
+    allowedRoles: ["admin", "manager"],
+  },
+  {
     key: "erp-center",
     path: "/erp-center",
     title: "ERP Merkezi",
@@ -62,6 +74,24 @@ export const appRoutes: AppRouteDefinition[] = [
     section: "Tarama ve Kural Motoru",
     description: "Klasor tarama, parca listesi ve toplu operasyon aktarimi",
     element: <WorkflowBuilderPage />,
+    allowedRoles: ["admin", "manager"],
+  },
+  {
+    key: "file-distribution",
+    path: "/file-distribution",
+    title: "Dosya Dagitim Merkezi",
+    section: "Tarama ve Kural Motoru",
+    description: "Hedef klasor plani, rename onizleme ve guvenli kopyalama akisi",
+    element: <FileDistributionPage />,
+    allowedRoles: ["admin", "manager"],
+  },
+  {
+    key: "segment-rules",
+    path: "/segment-rules",
+    title: "Segment Kural Merkezi",
+    section: "Tarama ve Kural Motoru",
+    description: "Segment onceligi ve segment bazli dagitim kurallari",
+    element: <SegmentRulesPage />,
     allowedRoles: ["admin", "manager"],
   },
   {

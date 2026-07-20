@@ -100,6 +100,53 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
         return;
       }
 
+      if (request.method === "POST" && url.pathname === "/api/file-distribution/preview") {
+        const payload = await readJsonBody(request);
+        const result = await application.previewFileDistribution.execute({
+          sourceFolder: path.resolve(payload?.sourceFolder || ""),
+          targetRootPath: payload?.targetRootPath ? path.resolve(payload.targetRootPath) : "",
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/file-distribution/rename-preview") {
+        const payload = await readJsonBody(request);
+        const result = await application.previewFileDistributionRename.execute({
+          sourceFolder: path.resolve(payload?.sourceFolder || ""),
+          targetRootPath: payload?.targetRootPath ? path.resolve(payload.targetRootPath) : "",
+          operation: payload?.operation || {},
+          selection: payload?.selection || {},
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/file-distribution/rename-execute") {
+        const payload = await readJsonBody(request);
+        const result = await application.executeFileDistributionRename.execute({
+          sourceFolder: path.resolve(payload?.sourceFolder || ""),
+          targetRootPath: payload?.targetRootPath ? path.resolve(payload.targetRootPath) : "",
+          conflictPolicy: payload?.conflictPolicy,
+          operation: payload?.operation || {},
+          selection: payload?.selection || {},
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/file-distribution/execute") {
+        const payload = await readJsonBody(request);
+        const result = await application.executeFileDistribution.execute({
+          sourceFolder: path.resolve(payload?.sourceFolder || ""),
+          targetRootPath: payload?.targetRootPath ? path.resolve(payload.targetRootPath) : "",
+          dryRun: payload?.dryRun,
+          conflictPolicy: payload?.conflictPolicy,
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
       if (request.method === "GET" && url.pathname === "/api/scan/3d-preview") {
         const result = await application.getScanModelPreview.execute(
           path.resolve(url.searchParams.get("folder") || ""),
@@ -182,6 +229,97 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
 
       if (request.method === "GET" && url.pathname === "/api/operations/open-jobs") {
         const result = await application.listOpenJobs.execute();
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/manual-workboards") {
+        const result = await application.listManualWorkboards.execute(auth?.user || null);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/manual-workboards") {
+        const payload = await readJsonBody(request);
+        const result = await application.createManualWorkboard.execute(payload || {}, auth?.user || null);
+        sendJson(response, 201, result);
+        return;
+      }
+
+      const manualBoardMatch = matchPath(url.pathname, "/api/manual-workboards/:boardId");
+      if (request.method === "GET" && manualBoardMatch) {
+        const result = await application.getManualWorkboardDetail.execute(manualBoardMatch.boardId, auth?.user || null);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "PATCH" && manualBoardMatch) {
+        const payload = await readJsonBody(request);
+        const result = await application.updateManualWorkboard.execute(
+          manualBoardMatch.boardId,
+          payload || {},
+          auth?.user || null,
+        );
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "DELETE" && manualBoardMatch) {
+        const result = await application.deleteManualWorkboard.execute(manualBoardMatch.boardId, auth?.user || null);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      const manualBoardItemsMatch = matchPath(url.pathname, "/api/manual-workboards/:boardId/items");
+      if (request.method === "POST" && manualBoardItemsMatch) {
+        const payload = await readJsonBody(request);
+        const result = await application.createManualBoardItem.execute(
+          manualBoardItemsMatch.boardId,
+          payload || {},
+          auth?.user || null,
+        );
+        sendJson(response, 201, result);
+        return;
+      }
+
+      const manualBoardItemMatch = matchPath(url.pathname, "/api/manual-workboards/items/:itemId");
+      if (request.method === "PATCH" && manualBoardItemMatch) {
+        const payload = await readJsonBody(request);
+        const result = await application.updateManualBoardItem.execute(
+          manualBoardItemMatch.itemId,
+          payload || {},
+          auth?.user || null,
+        );
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "DELETE" && manualBoardItemMatch) {
+        const result = await application.deleteManualBoardItem.execute(manualBoardItemMatch.itemId, auth?.user || null);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      const manualBoardMoveMatch = matchPath(url.pathname, "/api/manual-workboards/items/:itemId/move");
+      if (request.method === "POST" && manualBoardMoveMatch) {
+        const payload = await readJsonBody(request);
+        const result = await application.moveManualBoardItem.execute(
+          manualBoardMoveMatch.itemId,
+          payload || {},
+          auth?.user || null,
+        );
+        sendJson(response, 200, result);
+        return;
+      }
+
+      const manualBoardReorderMatch = matchPath(url.pathname, "/api/manual-workboards/items/:itemId/reorder");
+      if (request.method === "POST" && manualBoardReorderMatch) {
+        const payload = await readJsonBody(request);
+        const result = await application.reorderManualBoardItem.execute(
+          manualBoardReorderMatch.itemId,
+          payload || {},
+          auth?.user || null,
+        );
         sendJson(response, 200, result);
         return;
       }
@@ -396,9 +534,22 @@ function createHttpServer({ application, reactDistDir, defaultScanDir, frontendC
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/api/config/file-distribution") {
+        const result = await application.getFileDistributionConfig.execute();
+        sendJson(response, 200, result);
+        return;
+      }
+
       if (request.method === "PUT" && url.pathname === "/api/config/file-name-rules") {
         const payload = await readJsonBody(request);
         const result = await application.saveFileNameRules.execute(payload);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "PUT" && url.pathname === "/api/config/file-distribution") {
+        const payload = await readJsonBody(request);
+        const result = await application.saveFileDistributionConfig.execute(payload || {});
         sendJson(response, 200, result);
         return;
       }

@@ -1,4 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
+import { Card, Group, Stack, Text, Title } from "@mantine/core";
 
 type SectionCardProps = PropsWithChildren<{
   title: string;
@@ -8,15 +9,15 @@ type SectionCardProps = PropsWithChildren<{
 
 export function SectionCard({ title, description, actions, children }: SectionCardProps) {
   return (
-    <section className="section-card">
-      <header className="section-card__header">
-        <div>
-          <h2>{title}</h2>
-          {description ? <p>{description}</p> : null}
-        </div>
-        {actions ? <div className="section-card__actions">{actions}</div> : null}
-      </header>
-      <div className="section-card__body">{children}</div>
-    </section>
+    <Card className="section-card">
+      <Group className="section-card__header" justify="space-between" align="flex-start" wrap="wrap">
+        <Stack className="section-card__copy" gap={4}>
+          <Title order={2}>{title}</Title>
+          {description ? <Text c="dimmed">{description}</Text> : null}
+        </Stack>
+        {actions ? <Group className="section-card__actions" gap="xs">{actions}</Group> : null}
+      </Group>
+      <Stack className="section-card__body" gap="md">{children}</Stack>
+    </Card>
   );
 }

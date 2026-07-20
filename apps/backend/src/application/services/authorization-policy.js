@@ -71,6 +71,12 @@ function resolveAllowedRoles(method, pathname) {
     return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
   }
 
+  if (pathname.startsWith("/api/manual-workboards")) {
+    return method === "GET"
+      ? [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER, AUTH_ROLES.WORKER]
+      : [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
+  }
+
   if (pathname === "/api/operations/projects" && method === "POST") {
     return [AUTH_ROLES.ADMIN, AUTH_ROLES.MANAGER];
   }

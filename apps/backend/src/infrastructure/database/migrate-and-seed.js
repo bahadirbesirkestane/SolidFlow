@@ -9,6 +9,7 @@ function migrateAndSeedDatabase({ db, rootPath }) {
   ensureFileNameRuleColumns(db);
   ensureUserAuthColumns(db);
   ensureAuditEventActorColumn(db);
+  ensureManualWorkboardTables(db);
   seedTableIfEmpty({
     db,
     tableName: "file_type_rules",
@@ -45,6 +46,7 @@ function migrateAndSeedDatabase({ db, rootPath }) {
   seedDepartmentsAndUsersIfEmpty(db, rootPath);
   backfillUserAuthData(db);
   ensureBootstrapAdmin(db);
+  seedManualBoardsIfEmpty(db);
 }
 
 function createTables(db) {
@@ -227,6 +229,53 @@ function createTables(db) {
       action TEXT NOT NULL,
       payload_json TEXT,
       created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS manual_boards (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      department_id TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      is_visible_on_display INTEGER NOT NULL DEFAULT 1,
+      created_by_user_id TEXT,
+      updated_by_user_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (department_id) REFERENCES departments(id),
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+      FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS manual_board_items (
+      id TEXT PRIMARY KEY,
+      board_id TEXT NOT NULL,
+      parent_id TEXT,
+      title TEXT NOT NULL,
+      content TEXT,
+      status TEXT NOT NULL,
+      progress_percent INTEGER NOT NULL DEFAULT 0,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      depth INTEGER NOT NULL DEFAULT 0,
+      is_archived INTEGER NOT NULL DEFAULT 0,
+      created_by_user_id TEXT,
+      updated_by_user_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (board_id) REFERENCES manual_boards(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_id) REFERENCES manual_board_items(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+      FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS manual_board_item_assignees (
+      id TEXT PRIMARY KEY,
+      item_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      assigned_at TEXT NOT NULL,
+      UNIQUE(item_id, user_id),
+      FOREIGN KEY (item_id) REFERENCES manual_board_items(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
 }
@@ -534,6 +583,34 @@ function ensureAuditEventActorColumn(db) {
   }
 }
 
+function ensureManualWorkboardTables(db) {
+  const boardColumns = db.prepare("PRAGMA table_info(manual_boards)").all();
+  const boardColumnNames = new Set(boardColumns.map((column) => column.name));
+  const missingBoardColumns = [
+    ["is_visible_on_display", "INTEGER NOT NULL DEFAULT 1"],
+    ["created_by_user_id", "TEXT"],
+    ["updated_by_user_id", "TEXT"],
+  ].filter(([name]) => !boardColumnNames.has(name));
+
+  for (const [name, definition] of missingBoardColumns) {
+    db.exec(`ALTER TABLE manual_boards ADD COLUMN ${name} ${definition}`);
+  }
+
+  const itemColumns = db.prepare("PRAGMA table_info(manual_board_items)").all();
+  const itemColumnNames = new Set(itemColumns.map((column) => column.name));
+  const missingItemColumns = [
+    ["order_index", "INTEGER NOT NULL DEFAULT 0"],
+    ["depth", "INTEGER NOT NULL DEFAULT 0"],
+    ["is_archived", "INTEGER NOT NULL DEFAULT 0"],
+    ["created_by_user_id", "TEXT"],
+    ["updated_by_user_id", "TEXT"],
+  ].filter(([name]) => !itemColumnNames.has(name));
+
+  for (const [name, definition] of missingItemColumns) {
+    db.exec(`ALTER TABLE manual_board_items ADD COLUMN ${name} ${definition}`);
+  }
+}
+
 function seedDepartmentsAndUsersIfEmpty(db, rootPath) {
   const departmentCount = db.prepare("SELECT COUNT(1) AS count FROM departments").get().count;
   const userCount = db.prepare("SELECT COUNT(1) AS count FROM users").get().count;
@@ -700,6 +777,150 @@ function ensureBootstrapAdmin(db) {
     timestamp,
     timestamp,
   );
+}
+
+function seedManualBoardsIfEmpty(db) {
+  const boardCount = db.prepare("SELECT COUNT(1) AS count FROM manual_boards").get().count;
+  if (boardCount > 0) {
+    return;
+  }
+
+  const adminUser = db.prepare(`
+    SELECT id
+    FROM users
+    WHERE username = 'admin'
+    LIMIT 1
+  `).get();
+  const assemblyDepartment = db.prepare(`
+    SELECT id
+    FROM departments
+    WHERE id = 'dept-assembly'
+    LIMIT 1
+  `).get();
+  const assemblyUsers = db.prepare(`
+    SELECT id
+    FROM users
+    WHERE department_id = 'dept-assembly' AND is_active = 1
+    ORDER BY full_name ASC
+  `).all();
+
+  if (!adminUser?.id || !assemblyDepartment?.id || assemblyUsers.length === 0) {
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const boardId = "manual-board-assembly-daily";
+  db.prepare(`
+    INSERT INTO manual_boards (
+      id,
+      name,
+      description,
+      department_id,
+      is_active,
+      is_visible_on_display,
+      created_by_user_id,
+      updated_by_user_id,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    boardId,
+    "Montaj Gunluk Is Panosu",
+    "Fabrika ici manuel takip icin ornek pano",
+    assemblyDepartment.id,
+    1,
+    1,
+    adminUser.id,
+    adminUser.id,
+    timestamp,
+    timestamp,
+  );
+
+  const items = [
+    {
+      id: "manual-item-assembly-root-1",
+      parentId: null,
+      title: "Sabah Hazirlik Kontrolu",
+      content: "Hat acilisi ve gunluk hazirlik kontrolu",
+      status: "Devam Ediyor",
+      progress: 50,
+      orderIndex: 0,
+      depth: 0,
+      assigneeIds: [assemblyUsers[0].id],
+    },
+    {
+      id: "manual-item-assembly-child-1",
+      parentId: "manual-item-assembly-root-1",
+      title: "Takim Kiti Dizimi",
+      content: "Montaj kiti istasyonlara yerlestirilecek",
+      status: "Hazirlaniyor",
+      progress: 25,
+      orderIndex: 0,
+      depth: 1,
+      assigneeIds: [assemblyUsers[1]?.id || assemblyUsers[0].id],
+    },
+    {
+      id: "manual-item-assembly-root-2",
+      parentId: null,
+      title: "Kaliteye Giden Parti",
+      content: "Kontrol oncesi son hazirlik",
+      status: "Kontrol Ediliyor",
+      progress: 75,
+      orderIndex: 1,
+      depth: 0,
+      assigneeIds: [assemblyUsers[0].id],
+    },
+  ];
+
+  const itemStatement = db.prepare(`
+    INSERT INTO manual_board_items (
+      id,
+      board_id,
+      parent_id,
+      title,
+      content,
+      status,
+      progress_percent,
+      order_index,
+      depth,
+      is_archived,
+      created_by_user_id,
+      updated_by_user_id,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const assigneeStatement = db.prepare(`
+    INSERT INTO manual_board_item_assignees (id, item_id, user_id, assigned_at)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  runInTransaction(db, () => {
+    for (const item of items) {
+      itemStatement.run(
+        item.id,
+        boardId,
+        item.parentId,
+        item.title,
+        item.content,
+        item.status,
+        item.progress,
+        item.orderIndex,
+        item.depth,
+        0,
+        adminUser.id,
+        adminUser.id,
+        timestamp,
+        timestamp,
+      );
+
+      for (const userId of item.assigneeIds.filter(Boolean)) {
+        assigneeStatement.run(`manual-seed-assignee-${item.id}-${userId}`, item.id, userId, timestamp);
+      }
+    }
+  });
 }
 
 function deriveUsernameFromUser(user) {

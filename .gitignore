@@ -1,5 +1,7 @@
 .agents/
 .env
+node_modules/
+**/node_modules/
 
 server.log
 server.err.log

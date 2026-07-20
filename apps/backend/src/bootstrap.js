@@ -49,6 +49,7 @@ const { SqliteUserRepository } = require("./infrastructure/repositories/sqlite-u
 const { SqliteAuthSessionRepository } = require("./infrastructure/repositories/sqlite-auth-session-repository");
 const { SqliteOpenJobRepository } = require("./infrastructure/repositories/sqlite-open-job-repository");
 const { SqliteAuditLogRepository } = require("./infrastructure/repositories/sqlite-audit-log-repository");
+const { SqliteManualWorkboardRepository } = require("./infrastructure/repositories/sqlite-manual-workboard-repository");
 const { LocalAssignmentRuleRepository } = require("./infrastructure/repositories/local-assignment-rule-repository");
 const { LocalProjectScanner } = require("./infrastructure/services/local-project-scanner");
 const { WorkflowReportExporter } = require("./infrastructure/reporting/workflow-report-exporter");
@@ -65,11 +66,28 @@ const { ListErpWorkOrdersUseCase } = require("./application/use-cases/list-erp-w
 const { GetErpWorkOrderDetailUseCase } = require("./application/use-cases/get-erp-work-order-detail-use-case");
 const { ErpDispatchPlanner } = require("./application/services/erp-dispatch-planner");
 const { StartErpWorkOrderUseCase } = require("./application/use-cases/start-erp-work-order-use-case");
+const { ListManualWorkboardsUseCase } = require("./application/use-cases/list-manual-workboards-use-case");
+const { GetManualWorkboardDetailUseCase } = require("./application/use-cases/get-manual-workboard-detail-use-case");
+const { CreateManualWorkboardUseCase } = require("./application/use-cases/create-manual-workboard-use-case");
+const { UpdateManualWorkboardUseCase } = require("./application/use-cases/update-manual-workboard-use-case");
+const { DeleteManualWorkboardUseCase } = require("./application/use-cases/delete-manual-workboard-use-case");
+const { CreateManualBoardItemUseCase } = require("./application/use-cases/create-manual-board-item-use-case");
+const { UpdateManualBoardItemUseCase } = require("./application/use-cases/update-manual-board-item-use-case");
+const { MoveManualBoardItemUseCase } = require("./application/use-cases/move-manual-board-item-use-case");
+const { ReorderManualBoardItemUseCase } = require("./application/use-cases/reorder-manual-board-item-use-case");
+const { DeleteManualBoardItemUseCase } = require("./application/use-cases/delete-manual-board-item-use-case");
 const { SelectFolderUseCase } = require("./application/use-cases/select-folder-use-case");
 const { GetProjectModelPreviewUseCase } = require("./application/use-cases/get-project-model-preview-use-case");
 const { StreamProjectModelPreviewUseCase } = require("./application/use-cases/stream-project-model-preview-use-case");
 const { GetScanModelPreviewUseCase } = require("./application/use-cases/get-scan-model-preview-use-case");
 const { StreamScanModelPreviewUseCase } = require("./application/use-cases/stream-scan-model-preview-use-case");
+const { PreviewFileDistributionUseCase } = require("./application/use-cases/preview-file-distribution-use-case");
+const { PreviewFileDistributionRenameUseCase } = require("./application/use-cases/preview-file-distribution-rename-use-case");
+const { ExecuteFileDistributionUseCase } = require("./application/use-cases/execute-file-distribution-use-case");
+const { ExecuteFileDistributionRenameUseCase } = require("./application/use-cases/execute-file-distribution-rename-use-case");
+const { GetFileDistributionConfigUseCase } = require("./application/use-cases/get-file-distribution-config-use-case");
+const { SaveFileDistributionConfigUseCase } = require("./application/use-cases/save-file-distribution-config-use-case");
+const { ScanProjectCore } = require("./application/services/scan-project-core");
 const { createAppConfig } = require("./config/app-config");
 const { createHttpServer } = require("./presentation/http/server-factory");
 const { WindowsFolderPicker } = require("./infrastructure/services/windows-folder-picker");
@@ -77,6 +95,10 @@ const { GlbModelPreviewService } = require("./infrastructure/services/glb-model-
 const { CadConversionService } = require("./infrastructure/services/CadConversionService");
 const { PasswordHasher } = require("./infrastructure/services/password-hasher");
 const { LoginAttemptLimiter } = require("./infrastructure/services/login-attempt-limiter");
+const { LocalFileDistributionConfigRepository } = require("./infrastructure/repositories/local-file-distribution-config-repository");
+const { FileDistributionRuleEngine } = require("./domain/services/file-distribution-rule-engine");
+const { DistributionPlanBuilder } = require("./domain/services/distribution-plan-builder");
+const { LocalFileCopyAdapter } = require("./infrastructure/services/local-file-copy-adapter");
 
 function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const sqliteClient = new SqliteClient(rootPath);
@@ -94,12 +116,30 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const authSessionRepository = new SqliteAuthSessionRepository(db);
   const openJobRepository = new SqliteOpenJobRepository(db);
   const auditLogRepository = new SqliteAuditLogRepository(db);
+  const manualWorkboardRepository = new SqliteManualWorkboardRepository(db);
   const assignmentRuleRepository = new LocalAssignmentRuleRepository(
     new JsonFileRepository(
       path.join(rootPath, "data", "assignment-rules.json"),
       { departmentMappings: [] },
     ),
   );
+  const fileDistributionConfigRepository = new LocalFileDistributionConfigRepository({
+    jsonRepository: new JsonFileRepository(
+      path.join(rootPath, "data", "file-distribution-config.json"),
+      {
+        segmentPriority: [
+          "beforeFirstUnderscore",
+          "extension",
+          "folderName",
+          "betweenFirstAndSecondUnderscore",
+          "betweenSecondAndThirdUnderscore",
+          "betweenThirdAndFourthUnderscore",
+          "betweenFourthUnderscoreAndExtension",
+        ],
+        unresolvedFolderName: "_BELIRSIZ",
+      },
+    ),
+  });
   const erpWorkOrderRepository = new LocalErpWorkOrderRepository({
     jsonRepository: new JsonFileRepository(
       path.join(rootPath, "data", "erp-work-orders.json"),
@@ -116,6 +156,9 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
   const passwordHasher = new PasswordHasher();
   const loginAttemptLimiter = new LoginAttemptLimiter();
   const ruleResolver = new RuleResolver();
+  const fileDistributionRuleEngine = new FileDistributionRuleEngine();
+  const distributionPlanBuilder = new DistributionPlanBuilder({ fileDistributionRuleEngine });
+  const fileCopyAdapter = new LocalFileCopyAdapter();
   const reportExporter = new WorkflowReportExporter(rootPath);
   const operationsReportExporter = new OperationsReportExporter(rootPath);
   const workflowAssignmentResolver = new WorkflowAssignmentResolver({
@@ -136,6 +179,24 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     partOverrideRepository,
     cadConversionService,
   });
+  const scanProjectCore = new ScanProjectCore({
+    projectScanner,
+    ruleResolver,
+    fileTypeRuleRepository,
+    keywordRuleRepository,
+    fileNameRuleRepository,
+    partOverrideRepository,
+    cadConversionService,
+  });
+  const previewFileDistribution = new PreviewFileDistributionUseCase({
+    scanProjectCore,
+    fileDistributionConfigRepository,
+    distributionPlanBuilder,
+  });
+  const previewFileDistributionRename = new PreviewFileDistributionRenameUseCase({
+    previewFileDistributionUseCase: previewFileDistribution,
+    fileRenameAdapter: fileCopyAdapter,
+  });
   const createWorkflowInstancesUseCase = new CreateWorkflowInstancesUseCase({
     projectRepository,
     workflowTemplateRepository,
@@ -153,6 +214,22 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
 
   const application = {
     scanProject: scanProjectUseCase,
+    previewFileDistribution,
+    previewFileDistributionRename,
+    executeFileDistributionRename: new ExecuteFileDistributionRenameUseCase({
+      previewFileDistributionRenameUseCase: previewFileDistributionRename,
+      fileRenameAdapter: fileCopyAdapter,
+    }),
+    executeFileDistribution: new ExecuteFileDistributionUseCase({
+      previewFileDistributionUseCase: previewFileDistribution,
+      fileCopyAdapter,
+    }),
+    getFileDistributionConfig: new GetFileDistributionConfigUseCase({
+      fileDistributionConfigRepository,
+    }),
+    saveFileDistributionConfig: new SaveFileDistributionConfigUseCase({
+      fileDistributionConfigRepository,
+    }),
     getFileTypeRules: new GetFileTypeRulesUseCase({ fileTypeRuleRepository }),
     saveFileTypeRules: new SaveFileTypeRulesUseCase({ fileTypeRuleRepository }),
     getKeywordRules: new GetKeywordRulesUseCase({ keywordRuleRepository }),
@@ -248,6 +325,24 @@ function buildApplication(rootPath, appConfig = createAppConfig({ rootPath })) {
     getCurrentAuthSession: new GetCurrentAuthSessionUseCase(),
     resolveAuthContext: new ResolveAuthContextUseCase({ authSessionRepository }),
     listOpenJobs: new ListOpenJobsUseCase({ openJobRepository }),
+    listManualWorkboards: new ListManualWorkboardsUseCase({ manualWorkboardRepository }),
+    getManualWorkboardDetail: new GetManualWorkboardDetailUseCase({ manualWorkboardRepository }),
+    createManualWorkboard: new CreateManualWorkboardUseCase({ manualWorkboardRepository, userRepository }),
+    updateManualWorkboard: new UpdateManualWorkboardUseCase({ manualWorkboardRepository, userRepository }),
+    deleteManualWorkboard: new DeleteManualWorkboardUseCase({ manualWorkboardRepository, auditLogRepository }),
+    createManualBoardItem: new CreateManualBoardItemUseCase({
+      manualWorkboardRepository,
+      userRepository,
+      auditLogRepository,
+    }),
+    updateManualBoardItem: new UpdateManualBoardItemUseCase({
+      manualWorkboardRepository,
+      userRepository,
+      auditLogRepository,
+    }),
+    moveManualBoardItem: new MoveManualBoardItemUseCase({ manualWorkboardRepository, auditLogRepository }),
+    reorderManualBoardItem: new ReorderManualBoardItemUseCase({ manualWorkboardRepository, auditLogRepository }),
+    deleteManualBoardItem: new DeleteManualBoardItemUseCase({ manualWorkboardRepository, auditLogRepository }),
     listProjectAuditEvents: new ListProjectAuditEventsUseCase({ auditLogRepository }),
     updateWorkflowStep: new UpdateWorkflowStepUseCase({ workflowInstanceRepository, auditLogRepository }),
     addWorkflowStep: new AddWorkflowStepUseCase({ workflowInstanceRepository, auditLogRepository }),
